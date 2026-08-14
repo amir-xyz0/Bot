@@ -1,9 +1,9 @@
 services:
   - type: web
     name: life-assistant-bot
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app
+    runtime: docker
+    repo: https://github.com/your-username/your-repo  # لینک ریپوزیتوری خودت رو بذار
+    plan: free
     envVars:
       - key: BOT_TOKEN
         sync: false
@@ -11,5 +11,7 @@ services:
         sync: false
       - key: RAPIDAPI_KEY
         sync: false
-    buildFilter:
-      pythonVersion: 3.11.8
+      - key: MORNING_MESSAGE_TIME
+        value: "07:00"
+      - key: NIGHT_MESSAGE_TIME
+        value: "23:00"
