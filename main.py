@@ -21,7 +21,7 @@ Base.metadata.create_all(engine)
 
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ===== ثبت هندلرها (همون کد قبلی) =====
+# ===== ثبت هندلرها =====
 app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CallbackQueryHandler(start.start, pattern="main_menu"))
 
@@ -60,10 +60,10 @@ app.add_handler(CommandHandler("add", finance.add_transaction))
 app.add_handler(CommandHandler("finance", finance.show_finance_report))
 app.add_handler(CallbackQueryHandler(finance.buy_premium, pattern="buy_premium"))
 
-# ===== اجرا با Webhook (برای Render) =====
+# ===== اجرا با Webhook =====
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"🤖 ربات دستیار هوشمند روی پورت {port} راه‌اندازی شد!")
+    print(f"🤖 ربات روی پورت {port} راه‌اندازی شد!")
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
