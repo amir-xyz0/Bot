@@ -9,9 +9,11 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
-      - key: OPENAI_API_KEY
+      - key: RAPIDAPI_KEY
         sync: false
       - key: MORNING_MESSAGE_TIME
         value: "07:00"
       - key: NIGHT_MESSAGE_TIME
         value: "23:00"
+    buildFilter:
+      pythonVersion: 3.11.8
