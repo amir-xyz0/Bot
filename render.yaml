@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: life-assistant-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MORNING_MESSAGE_TIME
+        value: "07:00"
+      - key: NIGHT_MESSAGE_TIME
+        value: "23:00"
