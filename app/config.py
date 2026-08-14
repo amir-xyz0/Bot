@@ -13,7 +13,6 @@ class Config:
     MORNING_TIME = os.getenv("MORNING_MESSAGE_TIME", "07:00")
     NIGHT_TIME = os.getenv("NIGHT_MESSAGE_TIME", "23:00")
     
-    # تنظیمات OpenAI
     OPENAI_MODEL = "gpt-3.5-turbo"
     OPENAI_MAX_TOKENS = 150
 
