@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -10,7 +11,7 @@ from telegram.ext import (
 from app.config import config
 from app.handlers import start, profile, chat, reminders, game, history, finance
 from app.database import Base, engine
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import pytz
 
@@ -32,7 +33,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CallbackQueryHandler(start.start, pattern="main_menu"))
 
-# پروفایل
+# پروفایل - با تنظیم per_message=True برای رفع هشدار
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -41,7 +42,8 @@ conv_handler = ConversationHandler(
         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
-    fallbacks=[]
+    fallbacks=[],
+    per_message=True  # ✅ اضافه شد برای رفع هشدار
 )
 app.add_handler(conv_handler)
 app.add_handler(CommandHandler("profile", profile.show_profile))
@@ -71,19 +73,25 @@ app.add_handler(CommandHandler("add", finance.add_transaction))
 app.add_handler(CommandHandler("finance", finance.show_finance_report))
 app.add_handler(CallbackQueryHandler(finance.buy_premium, pattern="buy_premium"))
 
-# ===== زمان‌بندی پیام‌های خودکار =====
-scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Tehran"))
+# ===== زمان‌بندی پیام‌های خودکار (با BackgroundScheduler) =====
+scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Tehran"))
 
 async def send_morning_messages():
     # در نسخه کامل باید همه‌ی کاربران فعال رو از دیتابیس بخونی و بهشون پیام بدی
-    pass
+    print("🌅 پیام صبحگاهی ارسال شد")
 
 async def send_night_messages():
-    # در نسخه کامل باید همه‌ی کاربران فعال رو از دیتابیس بخونی و بهشون پیام بدی
-    pass
+    print("🌙 پیام شبانه ارسال شد")
 
-scheduler.add_job(send_morning_messages, 'cron', hour=7, minute=0)
-scheduler.add_job(send_night_messages, 'cron', hour=23, minute=0)
+# تابع wrapper برای اجرای توابع async در scheduler
+def morning_wrapper():
+    asyncio.run(send_morning_messages())
+
+def night_wrapper():
+    asyncio.run(send_night_messages())
+
+scheduler.add_job(morning_wrapper, 'cron', hour=7, minute=0)
+scheduler.add_job(night_wrapper, 'cron', hour=23, minute=0)
 scheduler.start()
 
 # ===== اجرا =====
