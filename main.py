@@ -43,7 +43,7 @@ conv_handler = ConversationHandler(
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
     fallbacks=[],
-    per_message=True  # ✅ اضافه شد برای رفع هشدار
+    per_message=True
 )
 app.add_handler(conv_handler)
 app.add_handler(CommandHandler("profile", profile.show_profile))
@@ -55,6 +55,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_a
 app.add_handler(CommandHandler("remind", reminders.set_reminder))
 app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'\d{4}-\d{2}-\d{2}'), reminders.process_reminder))
 app.add_handler(CommandHandler("listreminders", reminders.list_reminders))
+app.add_handler(CommandHandler("cancel_reminder", reminders.cancel_reminder))
 
 # بازی
 app.add_handler(CommandHandler("game", game.start_game))
