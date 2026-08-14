@@ -19,3 +19,5 @@ class Config:
     
     MORNING_TIME = os.getenv("MORNING_MESSAGE_TIME", "07:00")
     NIGHT_TIME = os.getenv("NIGHT_MESSAGE_TIME", "23:00")
+
+config = Config()
