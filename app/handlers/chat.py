@@ -11,7 +11,6 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_message = update.message.text
     
-    # دریافت لحن کاربر از دیتابیس
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     style = user.chat_style if user else "دوستانه"
@@ -21,11 +20,11 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = openai.ChatCompletion.create(
             model=config.OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": f"تو یک دستیار {style} هستی. با لحن {style} پاسخ بده."},
+                {"role": "system", "content": f"تو یک دستیار {style} هستی. با لحن {style} پاسخ بده. نام کاربر {user.preferred_name if user else 'دوست'} است."},
                 {"role": "user", "content": user_message}
             ],
             max_tokens=config.OPENAI_MAX_TOKENS
         )
         await update.message.reply_text(response.choices[0].message.content)
     except Exception as e:
-        await update.message.reply_text(f"مشکلی پیش اومد: {str(e)}")
+        await update.message.reply_text(f"❌ مشکلی پیش اومد: {str(e)}")
