@@ -1,5 +1,8 @@
 import logging
 import os
+import threading
+import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -18,10 +21,10 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# ایجاد جداول دیتابیس (اگه وجود نداشتن)
+# ایجاد جداول دیتابیس
 Base.metadata.create_all(engine)
 
-# ساخت اپلیکیشن با توکن از محیط
+# ساخت اپلیکیشن
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
 # ===== ثبت هندلرها =====
@@ -30,7 +33,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CallbackQueryHandler(start.start, pattern="main_menu"))
 
-# ثبت‌نام (پروفایل) با ConversationHandler
+# ثبت‌نام (پروفایل)
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -45,7 +48,7 @@ conv_handler = ConversationHandler(
 app.add_handler(conv_handler)
 app.add_handler(CommandHandler("profile", profile.show_profile))
 
-# چت با هوش مصنوعی (API)
+# چت با هوش مصنوعی
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
 # یادآوری‌ها
@@ -71,7 +74,22 @@ app.add_handler(CommandHandler("add", finance.add_transaction))
 app.add_handler(CommandHandler("finance", finance.show_finance_report))
 app.add_handler(CallbackQueryHandler(finance.buy_premium, pattern="buy_premium"))
 
-# ===== اجرا با Polling (ساده و بدون دردسر) =====
+# ===== ترفند برای رندر: یک وب سرور ساده در پورت ۱۰۰۰۰ =====
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_http_server():
+    server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
+    server.serve_forever()
+
+# اجرای وب سرور در یک ترد جداگانه
+thread = threading.Thread(target=run_http_server, daemon=True)
+thread.start()
+
+# ===== اجرای ربات با Polling =====
 if __name__ == "__main__":
     print("🤖 ربات با Polling راه‌اندازی شد!")
     app.run_polling()
