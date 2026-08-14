@@ -2,7 +2,7 @@ services:
   - type: web
     name: life-assistant-bot
     runtime: docker
-    repo: https://github.com/your-username/your-repo  # لینک ریپوزیتوری خودت رو بذار
+    repo: https://github.com/amir-xyz0/Bot
     plan: free
     envVars:
       - key: BOT_TOKEN
