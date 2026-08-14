@@ -13,16 +13,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("📋 منوی اصلی", callback_data="main_menu")]
         ]
         await update.message.reply_text(
-            f"خوش برگشتی {user.preferred_name or 'دوست عزیز'}! 🎉",
+            f"🎉 خوش برگشتی {user.preferred_name or 'دوست عزیز'}!",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
         keyboard = [
             [InlineKeyboardButton("🚀 شروع ثبت‌نام", callback_data="start_profile")]
         ]
-        await update.message.reply_photo(
-            photo="https://your-image-host.com/welcome.jpg",
-            caption="🤖 به دستیار همراهت خوش اومدی!\n\nمن اینجام تا روزت رو بهتر کنم. بیا پروفایل رو کامل کنیم تا بهتر بشناسمت.",
+        await update.message.reply_text(
+            "🤖 به دستیار همراهت خوش اومدی!\n\n"
+            "من اینجام تا روزت رو بهتر کنم. "
+            "بیا پروفایل رو کامل کنیم تا بهتر بشناسمت.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     db.close()
