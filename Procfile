@@ -1,1 +1,1 @@
-web: gunicorn main:app
+web: gunicorn main:app --worker-class sync --timeout 120
