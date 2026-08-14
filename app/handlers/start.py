@@ -1,0 +1,28 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+from app.database import SessionLocal
+from app.models import User
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db = SessionLocal()
+    user = db.query(User).filter_by(user_id=user_id).first()
+    
+    if user:
+        keyboard = [
+            [InlineKeyboardButton("📋 منوی اصلی", callback_data="main_menu")]
+        ]
+        await update.message.reply_text(
+            f"خوش برگشتی {user.preferred_name or 'دوست عزیز'}!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        keyboard = [
+            [InlineKeyboardButton("🚀 شروع ثبت‌نام", callback_data="start_profile")]
+        ]
+        await update.message.reply_photo(
+            photo="https://your-image-host.com/welcome.jpg",
+            caption="به دستیار همراهت خوش اومدی! 🤖\n\nمن اینجام تا روزت رو بهتر کنم. بیا پروفایل رو کامل کنیم.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    db.close()
