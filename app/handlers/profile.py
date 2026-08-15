@@ -13,8 +13,12 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["preferred_name"] = update.message.text
-    await update.message.delete()
-    
+    # حذف پیام کاربر
+    try:
+        await update.message.delete()
+    except:
+        pass
+
     keyboard = [
         [InlineKeyboardButton("مرد", callback_data="male")],
         [InlineKeyboardButton("زن", callback_data="female")]
@@ -38,8 +42,11 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if age < 10 or age > 100:
             raise ValueError
         context.user_data["age"] = age
-        await update.message.delete()
-        
+        try:
+            await update.message.delete()
+        except:
+            pass
+
         keyboard = [
             [InlineKeyboardButton("دوستانه", callback_data="friendly")],
             [InlineKeyboardButton("رسمی", callback_data="formal")],
@@ -59,7 +66,7 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data["chat_style"] = query.data
-    
+
     db = SessionLocal()
     user = User(
         user_id=update.effective_user.id,
@@ -71,9 +78,9 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.add(user)
     db.commit()
     db.close()
-    
+
     from app.handlers.menu import main_menu
-    await query.edit_message_text("ثبت‌نام با موفقیت انجام شد.")
+    await query.edit_message_text("✅ ثبت‌نام با موفقیت انجام شد.")
     await main_menu(update, context)
     return ConversationHandler.END
 
@@ -82,22 +89,22 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
-    
+
     if not user:
         await update.message.reply_text("شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
-    
+
     gender_map = {"male": "مرد", "female": "زن"}
     style_map = {"friendly": "دوستانه", "formal": "رسمی", "funny": "طنز", "calm": "آرام"}
-    
+
     text = (
-        f"پروفایل شما:\n"
+        f"👤 **پروفایل شما**\n\n"
         f"نام: {user.preferred_name}\n"
         f"جنسیت: {gender_map.get(user.gender, 'نامشخص')}\n"
         f"سن: {user.age}\n"
         f"لحن: {style_map.get(user.chat_style, 'نامشخص')}\n"
-        f"وضعیت: {'پریمیوم' if user.is_premium else 'رایگان'}"
+        f"وضعیت: {'💎 پریمیوم' if user.is_premium else '🆓 رایگان'}"
     )
-    
+
     keyboard = [[InlineKeyboardButton("بازگشت به منو", callback_data="main_menu")]]
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
