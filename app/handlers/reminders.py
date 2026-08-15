@@ -102,3 +102,51 @@ async def get_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ خطا: {str(e)}")
     
     return ConversationHandler.END
+
+async def list_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """نمایش لیست یادآوری‌های فعال"""
+    user_id = update.effective_user.id
+    db = SessionLocal()
+    reminders = db.query(Reminder).filter_by(user_id=user_id, is_active=True).all()
+    db.close()
+    
+    if not reminders:
+        await update.message.reply_text("📭 **هیچ یادآوری فعالی ندارید!**")
+        return
+    
+    text = "📋 **لیست یادآوری‌های فعال:**\n\n"
+    for i, r in enumerate(reminders[:10], 1):
+        time_str = r.remind_time.strftime("%Y-%m-%d %H:%M")
+        text += f"{i}. {r.title}\n   ⏰ {time_str}\n   🆔 شناسه: `{r.id}`\n\n"
+    
+    text += "برای لغو یادآوری: /cancel_reminder [شناسه]"
+    await update.message.reply_text(text)
+
+async def cancel_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """لغو یک یادآوری با شناسه"""
+    try:
+        if not context.args:
+            await update.message.reply_text(
+                "❌ لطفاً شناسه یادآوری را وارد کنید.\n"
+                "مثال: /cancel_reminder 5"
+            )
+            return
+        
+        reminder_id = int(context.args[0])
+        user_id = update.effective_user.id
+        
+        db = SessionLocal()
+        reminder = db.query(Reminder).filter_by(id=reminder_id, user_id=user_id).first()
+        
+        if reminder:
+            reminder.is_active = False
+            db.commit()
+            await update.message.reply_text(f"✅ **یادآوری با شناسه {reminder_id} لغو شد.**")
+        else:
+            await update.message.reply_text(f"❌ یادآوری با شناسه {reminder_id} پیدا نشد.")
+        db.close()
+        
+    except ValueError:
+        await update.message.reply_text("❌ شناسه باید یک عدد باشد.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ خطا: {str(e)}")
