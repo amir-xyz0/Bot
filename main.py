@@ -67,7 +67,7 @@ threading.Thread(target=run_http_server, daemon=True).start()
 # ===== استارت Scheduler =====
 scheduler.start()
 
-# ===== اجرا با تنظیمات دقیق Polling =====
+# ===== اجرا =====
 if __name__ == "__main__":
     print("ربات راه‌اندازی شد!")
     app.run_polling(poll_interval=3.0, timeout=20, allowed_updates=None)
