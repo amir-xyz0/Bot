@@ -29,7 +29,7 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_section'] = 'chat'
     await query.edit_message_text(
         "💬 **بخش گفتگو با دستیار**\n\n"
-        "هر سوالی دارید، بپرسید.\n"
+        "هر سوالی دارید، بپرسید. من اینجام تا کمکت کنم.\n"
         "برای بازگشت به منو، دکمه زیر را بزنید.",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
@@ -41,26 +41,23 @@ async def reminder_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     await query.edit_message_text(
         "⏰ **بخش یادآوری‌ها**\n\n"
-        "برای تنظیم یادآوری جدید، از دکمه زیر استفاده کنید.",
+        "برای تنظیم یادآوری، پیام خود را به این شکل ارسال کنید:\n"
+        "`2025-01-15 14:30 | عنوان یادآوری`\n\n"
+        "برای دیدن لیست یادآوری‌ها، /listreminders را بزنید.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("➕ تنظیم یادآوری جدید", callback_data="set_reminder")],
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ])
     )
+    context.user_data['current_section'] = 'reminder'
 
 async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text(
-        "📊 **بخش تاریخچه احساسات**\n\n"
-        "برای ثبت احساس امروز یا مشاهده تاریخچه، از دکمه‌های زیر استفاده کنید.",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("😊 ثبت احساس امروز", callback_data="record_mood")],
-            [InlineKeyboardButton("📋 مشاهده تاریخچه", callback_data="show_history")],
-            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
-        ])
-    )
+    from app.handlers import history
+    await history.show_history(update, context)
 
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from app.handlers import profile
-    await profile.show_profile(update, context)
+    query = update.callback_query
+    await query.answer()
+    from app.handlers import profile_edit
+    await profile_edit.show_profile(update, context)
