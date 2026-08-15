@@ -1,4 +1,5 @@
 import requests
+import json
 from telegram import Update
 from telegram.ext import ContextTypes
 from app.config import config
@@ -15,21 +16,22 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user:
         await update.message.reply_text(
             "❗ شما ثبت‌نام نکرده‌اید.\n"
-            "لطفاً /start را بزنید و ثبت‌نام را کامل کنید."
+            "لطفاً /start را بزنید."
         )
         return
     
     if context.user_data.get('current_section') != 'chat':
         await update.message.reply_text(
-            "💡 لطفاً ابتدا از منوی اصلی، بخش «گفتگو با دستیار» را انتخاب کنید."
+            "💡 لطفاً از منو، بخش گفتگو را انتخاب کنید."
         )
         return
     
     user_message = update.message.text
     
+    # چک کردن کلید API
     if not config.RAPIDAPI_KEY:
         await update.message.reply_text(
-            "⚠️ متأسفانه سرویس گفتگو در حال حاضر در دسترس نیست."
+            "⚠️ متأسفانه سرویس گفتگو در دسترس نیست. (کلید API تنظیم نشده)"
         )
         return
     
@@ -50,6 +52,7 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     
     try:
+        # ارسال درخواست به API
         response = requests.post(
             config.CHAT_API_URL,
             json=payload,
@@ -57,24 +60,40 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
             timeout=30
         )
         
-        if response.status_code == 200:
-            data = response.json()
-            if "choices" in data and len(data["choices"]) > 0:
-                reply = data["choices"][0]["message"]["content"]
-            elif "response" in data:
-                reply = data["response"]
-            else:
-                reply = data.get("result", "پاسخی دریافت نشد.")
+        # دریافت پاسخ
+        response_data = response.json()
+        
+        # نمایش خطای دقیق در صورت وجود
+        if response.status_code != 200:
+            error_msg = response_data.get("message", "خطای ناشناخته")
+            await update.message.reply_text(
+                f"❌ خطای سرور ({response.status_code}):\n{error_msg}"
+            )
+            return
+        
+        # استخراج پاسخ از ساختارهای مختلف
+        reply = None
+        if "choices" in response_data and len(response_data["choices"]) > 0:
+            reply = response_data["choices"][0].get("message", {}).get("content")
+        elif "response" in response_data:
+            reply = response_data["response"]
+        elif "result" in response_data:
+            reply = response_data["result"]
+        elif "text" in response_data:
+            reply = response_data["text"]
+        
+        if reply:
             await update.message.reply_text(reply)
         else:
             await update.message.reply_text(
-                "🔌 خطا در ارتباط با سرور. لطفاً چند لحظه دیگر تلاش کنید."
+                f"⚠️ پاسخ غیرمنتظره از سرور:\n```json\n{json.dumps(response_data, indent=2, ensure_ascii=False)}\n```"
             )
+            
     except requests.exceptions.Timeout:
-        await update.message.reply_text(
-            "⏰ زمان پاسخ‌دهی طولانی شد. لطفاً دوباره تلاش کنید."
-        )
+        await update.message.reply_text("⏰ زمان پاسخ‌دهی طولانی شد. لطفاً دوباره تلاش کنید.")
+    except requests.exceptions.ConnectionError:
+        await update.message.reply_text("🔌 اتصال به سرور برقرار نشد.")
+    except json.JSONDecodeError:
+        await update.message.reply_text("⚠️ پاسخ سرور معتبر نیست.")
     except Exception as e:
-        await update.message.reply_text(
-            "❌ مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
-        )
+        await update.message.reply_text(f"❌ خطا: {str(e)}")
