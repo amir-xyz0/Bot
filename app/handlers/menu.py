@@ -6,6 +6,11 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query:
         await query.answer()
         message = query.message
+        # حذف پیام‌های قبلی
+        try:
+            await query.message.delete()
+        except:
+            pass
     else:
         message = update.message
 
@@ -17,17 +22,17 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     text = "📋 **منوی اصلی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید."
-
-    if query:
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
-    else:
-        await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+    await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data['current_section'] = 'chat'
-    await query.edit_message_text(
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text(
         "💬 **بخش گفتگو با دستیار**\n\n"
         "هر سوالی دارید، بپرسید. من اینجام تا کمکت کنم.\n"
         "برای بازگشت به منو، دکمه زیر را بزنید.",
@@ -39,20 +44,31 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def reminder_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text(
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text(
         "⏰ **بخش یادآوری‌ها**\n\n"
-        "برای تنظیم یادآوری، پیام خود را به این شکل ارسال کنید:\n"
-        "`2025-01-15 14:30 | عنوان یادآوری`\n\n"
-        "برای دیدن لیست یادآوری‌ها، /listreminders را بزنید.",
+        "برای تنظیم یادآوری، لطفاً مراحل زیر را دنبال کنید:\n"
+        "1️⃣ `/remind` را بزنید.\n"
+        "2️⃣ تاریخ را به فرمت `YYYY-MM-DD` وارد کنید.\n"
+        "3️⃣ ساعت را به فرمت `HH:MM` وارد کنید.\n"
+        "4️⃣ عنوان یادآوری را وارد کنید.\n\n"
+        "برای دیدن لیست یادآوری‌ها: /listreminders\n"
+        "برای لغو: /cancel_reminder [شناسه]",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ])
     )
-    context.user_data['current_section'] = 'reminder'
 
 async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    try:
+        await query.message.delete()
+    except:
+        pass
     from app.handlers import history
     await history.show_history(update, context)
 
