@@ -1,36 +1,26 @@
-import pytz
-import logging
-from datetime import datetime
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.date import DateTrigger
 from app.database import SessionLocal
 from app.models import Reminder
-from app.utils.helpers import get_tehran_time
-
-# تنظیم لاگر
-logger = logging.getLogger(__name__)
-
-# ایجاد نمونه Scheduler (در سطح ماژول)
-scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Tehran"))
+from datetime import datetime
+import pytz
+import re
 
 async def set_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """ورود به حالت تنظیم یادآوری"""
     await update.message.reply_text(
         "⏰ **تنظیم یادآوری**\n\n"
-        "لطفاً زمان و متن رو به این شکل وارد کن:\n"
+        "لطفاً زمان و متن را به این شکل وارد کنید:\n"
         "`2025-01-15 14:30 | جلسه با آقای کریمی`\n\n"
-        "برای لغو /cancel رو بزن."
+        "برای لغو، /cancel را بزنید."
     )
 
 async def process_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش یادآوری وارد شده توسط کاربر"""
     try:
-        parts = update.message.text.split("|")
+        text = update.message.text
+        parts = text.split("|")
         if len(parts) < 2:
             await update.message.reply_text(
-                "❌ فرمت وارد شده صحیح نیست!\n"
+                "❌ فرمت صحیح نیست!\n"
                 "فرمت صحیح: `2025-01-15 14:30 | عنوان یادآوری`"
             )
             return
@@ -38,11 +28,20 @@ async def process_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         time_str = parts[0].strip()
         title = parts[1].strip()
         
-        remind_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M")
-        remind_time = pytz.timezone("Asia/Tehran").localize(remind_time)
+        # بررسی فرمت زمان
+        try:
+            remind_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M")
+            remind_time = pytz.timezone("Asia/Tehran").localize(remind_time)
+        except:
+            await update.message.reply_text(
+                "❌ فرمت زمان اشتباه است!\n"
+                "فرمت صحیح: `2025-01-15 14:30`"
+            )
+            return
         
-        if remind_time < get_tehran_time():
-            await update.message.reply_text("❌ زمان وارد شده گذشته! لطفاً زمان آینده رو وارد کن.")
+        now = datetime.now(pytz.timezone("Asia/Tehran"))
+        if remind_time < now:
+            await update.message.reply_text("❌ زمان وارد شده گذشته است!")
             return
         
         # ذخیره در دیتابیس
@@ -59,71 +58,44 @@ async def process_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reminder_id = reminder.id
         db.close()
         
-        # اضافه کردن job به scheduler
-        scheduler.add_job(
-            send_reminder,
-            DateTrigger(run_date=remind_time),
-            args=[update.effective_user.id, title, reminder_id, update.get_bot()]
-        )
+        # اضافه کردن به scheduler
+        from app.scheduler import add_reminder_job
+        add_reminder_job(update.effective_user.id, title, reminder_id, remind_time, update.get_bot())
         
         await update.message.reply_text(
-            f"✅ یادآوری برای {time_str} با عنوان «{title}» تنظیم شد!"
+            f"✅ **یادآوری تنظیم شد!**\n\n"
+            f"📌 عنوان: {title}\n"
+            f"⏰ زمان: {time_str}\n"
+            f"🆔 شناسه: {reminder_id}"
         )
-        
-    except ValueError as e:
-        await update.message.reply_text(
-            f"❌ خطا در فرمت زمان!\n"
-            f"فرمت صحیح: `2025-01-15 14:30 | عنوان`\n"
-            f"جزئیات: {str(e)}"
-        )
-    except Exception as e:
-        logger.error(f"Error in process_reminder: {e}")
-        await update.message.reply_text(f"❌ مشکلی پیش اومد: {str(e)}")
-
-async def send_reminder(user_id: int, title: str, reminder_id: int, bot):
-    """ارسال پیام یادآوری به کاربر (این تابع توسط scheduler اجرا میشه)"""
-    try:
-        await bot.send_message(
-            chat_id=user_id,
-            text=f"⏰ **یادآوری!**\n\n{title}\n\nزمانش رسیده! 🕐"
-        )
-        
-        # غیرفعال کردن یادآوری در دیتابیس
-        db = SessionLocal()
-        reminder = db.query(Reminder).filter_by(id=reminder_id).first()
-        if reminder:
-            reminder.is_active = False
-            db.commit()
-        db.close()
         
     except Exception as e:
-        logger.error(f"Error sending reminder to {user_id}: {e}")
+        await update.message.reply_text(f"❌ خطا: {str(e)}")
 
 async def list_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش لیست یادآوری‌های فعال"""
     user_id = update.effective_user.id
     db = SessionLocal()
     reminders = db.query(Reminder).filter_by(user_id=user_id, is_active=True).all()
     db.close()
     
     if not reminders:
-        await update.message.reply_text("📭 هیچ یادآوری فعالی نداری!")
+        await update.message.reply_text("📭 **هیچ یادآوری فعالی ندارید!**")
         return
     
-    text = "📋 **یادآوری‌های فعال:**\n\n"
+    text = "📋 **لیست یادآوری‌های فعال:**\n\n"
     for i, r in enumerate(reminders[:10], 1):
         time_str = r.remind_time.strftime("%Y-%m-%d %H:%M")
-        text += f"{i}. {r.title} - {time_str}\n"
+        text += f"{i}. {r.title}\n   ⏰ {time_str}\n   🆔 شناسه: {r.id}\n\n"
     
+    text += "برای لغو یادآوری: /cancel_reminder [شناسه]"
     await update.message.reply_text(text)
 
 async def cancel_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """لغو یک یادآوری با شناسه"""
     try:
-        if not context.args or len(context.args) == 0:
+        if not context.args:
             await update.message.reply_text(
-                "❌ لطفاً شناسه یادآوری رو وارد کن.\n"
-                "مثال: `/cancel_reminder 5`"
+                "❌ لطفاً شناسه یادآوری را وارد کنید.\n"
+                "مثال: /cancel_reminder 5"
             )
             return
         
@@ -136,26 +108,12 @@ async def cancel_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if reminder:
             reminder.is_active = False
             db.commit()
-            await update.message.reply_text(f"✅ یادآوری با شناسه {reminder_id} لغو شد.")
+            await update.message.reply_text(f"✅ **یادآوری با شناسه {reminder_id} لغو شد.**")
         else:
             await update.message.reply_text(f"❌ یادآوری با شناسه {reminder_id} پیدا نشد.")
         db.close()
         
     except ValueError:
-        await update.message.reply_text("❌ شناسه باید یک عدد باشه.")
+        await update.message.reply_text("❌ شناسه باید یک عدد باشد.")
     except Exception as e:
         await update.message.reply_text(f"❌ خطا: {str(e)}")
-
-def schedule_existing_reminders():
-    """زمان‌بندی مجدد یادآوری‌های فعال از دیتابیس (در هنگام راه‌اندازی)"""
-    db = SessionLocal()
-    reminders = db.query(Reminder).filter_by(is_active=True).all()
-    now = get_tehran_time()
-    
-    for r in reminders:
-        if r.remind_time > now:
-            # اینجا برای ارسال نیاز به bot داریم که در main.py باید پاس داده بشه
-            # فعلاً فقط لاگ می‌کنیم
-            logger.info(f"Scheduled reminder: {r.title} at {r.remind_time}")
-    
-    db.close()
