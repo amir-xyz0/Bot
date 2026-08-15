@@ -2,7 +2,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
-from app.handlers.menu import main_menu
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -11,6 +10,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
 
     if user:
+        from app.handlers.menu import main_menu
         await main_menu(update, context)
         return
 
