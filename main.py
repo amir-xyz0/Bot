@@ -57,10 +57,19 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, profile_edit.han
 # ===== احساسات =====
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
+app.add_handler(CommandHandler("history", history.show_history))
 
 # ===== یادآوری =====
-app.add_handler(CommandHandler("remind", reminders.set_reminder))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'\d{4}-\d{2}-\d{2}'), reminders.process_reminder))
+reminder_conv = ConversationHandler(
+    entry_points=[CommandHandler("remind", reminders.set_reminder)],
+    states={
+        reminders.DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.get_date)],
+        reminders.TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.get_time)],
+        reminders.TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.get_title)]
+    },
+    fallbacks=[CommandHandler("start", start.start)]
+)
+app.add_handler(reminder_conv)
 app.add_handler(CommandHandler("listreminders", reminders.list_reminders))
 app.add_handler(CommandHandler("cancel_reminder", reminders.cancel_reminder))
 
