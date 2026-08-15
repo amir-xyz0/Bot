@@ -2,28 +2,33 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
-from app.handlers.menu import main_menu
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
-
-    # پاک کردن وضعیت قبلی
+    
     context.user_data.clear()
-
+    
     if user:
+        from app.handlers.menu import main_menu
         await main_menu(update, context)
         return
-
+    
+    # ⭐ صفحه خوش‌آمدگویی مثل عکس
     text = (
-        "🤖 **به دستیار هوشمند خود خوش آمدید**\n\n"
-        "من اینجا هستم تا به شما در مدیریت روزانه، یادآوری‌ها، "
-        "گفتگو و ثبت احساسات کمک کنم.\n\n"
+        "🤖 **دستیار هوشمند**\n\n"
+        "**این ربات چه می‌کند؟**\n\n"
+        "ربات دستیار هوشمند برای همراهی شما در زندگی روزمره\n\n"
+        "• گفتگو با دستیار هوشمند\n"
+        "• تنظیم یادآوری‌های روزانه\n"
+        "• ثبت و تحلیل احساسات\n"
+        "• مدیریت پروفایل شخصی\n\n"
+        "---\n\n"
         "برای شروع، لطفاً ثبت‌نام را تکمیل کنید."
     )
-    keyboard = [[InlineKeyboardButton("🚀 شروع ثبت‌نام", callback_data="start_profile")]]
+    keyboard = [[InlineKeyboardButton("🚀 شروع ربات", callback_data="start_profile")]]
     await update.message.reply_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
