@@ -8,7 +8,7 @@ NAME, GENDER, AGE, STYLE = range(4)
 async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    # حذف پیام قبلی (صفحه خوش‌آمدگویی)
+    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
@@ -25,7 +25,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
     except:
         pass
-    # حذف پیام قبلی ربات (لطفاً نام خود را وارد کنید)
+    # حذف پیام قبلی ربات
     try:
         if 'msg_id' in context.user_data:
             await update.message.bot.delete_message(
@@ -50,7 +50,7 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data["gender"] = query.data
-    # حذف پیام قبلی (جنسیت)
+    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
@@ -70,7 +70,7 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.delete()
         except:
             pass
-        # حذف پیام قبلی ربات (سن)
+        # حذف پیام قبلی ربات
         try:
             if 'msg_id' in context.user_data:
                 await update.message.bot.delete_message(
@@ -100,7 +100,7 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data["chat_style"] = query.data
-    # حذف پیام قبلی (لحن)
+    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
@@ -119,18 +119,7 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
     
     msg = await query.message.reply_text("✅ **ثبت‌نام با موفقیت انجام شد!**")
-    context.user_data['msg_id'] = msg.message_id
     
     from app.handlers.menu import main_menu
-    # حذف پیام تبریک بعد از ۲ ثانیه
-    import asyncio
-    async def delete_after():
-        await asyncio.sleep(2)
-        try:
-            await msg.delete()
-        except:
-            pass
-    asyncio.create_task(delete_after())
-    
     await main_menu(update, context)
     return ConversationHandler.END
