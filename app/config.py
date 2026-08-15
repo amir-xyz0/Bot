@@ -10,7 +10,6 @@ class Config:
     
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///bot_data.db")
     
-    # API جدید
     RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
     if not RAPIDAPI_KEY:
         raise ValueError("RAPIDAPI_KEY is required!")
