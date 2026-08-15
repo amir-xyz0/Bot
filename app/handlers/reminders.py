@@ -4,102 +4,72 @@ from app.database import SessionLocal
 from app.models import Reminder
 from datetime import datetime, timedelta
 import pytz
-import calendar
 
 DATE, TIME, TITLE = range(3, 6)
 
-# تاریخ‌های پیشنهادی
-QUICK_DATES = [
-    ("امروز", 0),
-    ("فردا", 1),
-    ("۳ روز بعد", 3),
-    ("۵ روز بعد", 5),
-    ("۱ هفته بعد", 7),
-]
-
-# ساعت‌های پیشنهادی
-QUICK_TIMES = [
-    ("۸ صبح", "08:00"),
-    ("۱۰ صبح", "10:00"),
-    ("۱۲ ظهر", "12:00"),
-    ("۲ بعدازظهر", "14:00"),
-    ("۴ بعدازظهر", "16:00"),
-    ("۶ عصر", "18:00"),
-    ("۸ شب", "20:00"),
-]
-
 async def set_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """شروع تنظیم یادآوری با دکمه‌های تاریخ"""
-    keyboard = []
-    row = []
-    for i, (label, days) in enumerate(QUICK_DATES):
-        row.append(InlineKeyboardButton(label, callback_data=f"date_{days}"))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-    
-    keyboard.append([InlineKeyboardButton("📅 انتخاب دستی", callback_data="date_manual")])
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")])
+    """شروع تنظیم یادآوری - انتخاب سریع"""
+    keyboard = [
+        [InlineKeyboardButton("📅 امروز", callback_data="quick_today")],
+        [InlineKeyboardButton("📅 فردا", callback_data="quick_tomorrow")],
+        [InlineKeyboardButton("📅 ۳ روز بعد", callback_data="quick_3days")],
+        [InlineKeyboardButton("📅 ۱ هفته بعد", callback_data="quick_7days")],
+        [InlineKeyboardButton("✏️ تنظیم دستی", callback_data="quick_manual")],
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]
+    ]
     
     await update.message.reply_text(
-        "📅 **تنظیم یادآوری - مرحله ۱ از ۳**\n\n"
-        "لطفاً تاریخ مورد نظر را انتخاب کنید:",
+        "⏰ **تنظیم یادآوری سریع**\n\n"
+        "لطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     return DATE
 
-async def date_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش انتخاب تاریخ"""
+async def quick_date_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """پردازش انتخاب سریع تاریخ"""
     query = update.callback_query
     await query.answer()
     
-    data = query.data.replace("date_", "")
+    data = query.data.replace("quick_", "")
+    now = datetime.now(pytz.timezone("Asia/Tehran"))
     
-    if data == "manual":
+    if data == "today":
+        context.user_data['reminder_date'] = now.strftime("%Y-%m-%d")
+    elif data == "tomorrow":
+        context.user_data['reminder_date'] = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    elif data == "3days":
+        context.user_data['reminder_date'] = (now + timedelta(days=3)).strftime("%Y-%m-%d")
+    elif data == "7days":
+        context.user_data['reminder_date'] = (now + timedelta(days=7)).strftime("%Y-%m-%d")
+    elif data == "manual":
         await query.edit_message_text(
             "📅 **تاریخ را به فرمت `YYYY-MM-DD` وارد کنید**\n"
             "مثال: `2025-12-25`"
         )
         return DATE
     
-    days = int(data)
-    selected_date = datetime.now(pytz.timezone("Asia/Tehran")) + timedelta(days=days)
-    context.user_data['reminder_date'] = selected_date.strftime("%Y-%m-%d")
+    # نمایش ساعت‌های پیشنهادی
+    keyboard = [
+        [InlineKeyboardButton("⏰ ۸:۰۰", callback_data="time_08:00"),
+         InlineKeyboardButton("⏰ ۱۰:۰۰", callback_data="time_10:00")],
+        [InlineKeyboardButton("⏰ ۱۲:۰۰", callback_data="time_12:00"),
+         InlineKeyboardButton("⏰ ۱۴:۰۰", callback_data="time_14:00")],
+        [InlineKeyboardButton("⏰ ۱۶:۰۰", callback_data="time_16:00"),
+         InlineKeyboardButton("⏰ ۱۸:۰۰", callback_data="time_18:00")],
+        [InlineKeyboardButton("⏰ ۲۰:۰۰", callback_data="time_20:00"),
+         InlineKeyboardButton("⏰ ۲۲:۰۰", callback_data="time_22:00")],
+        [InlineKeyboardButton("✏️ تنظیم دستی", callback_data="time_manual")],
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_date")]
+    ]
     
-    # رفتن به مرحله انتخاب ساعت
-    return await show_time_selection(update, context)
-
-async def show_time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش دکمه‌های ساعت"""
-    keyboard = []
-    row = []
-    for label, time in QUICK_TIMES:
-        row.append(InlineKeyboardButton(label, callback_data=f"time_{time}"))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-    
-    keyboard.append([InlineKeyboardButton("⏰ انتخاب دستی", callback_data="time_manual")])
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت به تاریخ", callback_data="back_to_date")])
-    
-    if hasattr(update, 'callback_query'):
-        await update.callback_query.edit_message_text(
-            f"📅 تاریخ انتخاب‌شده: `{context.user_data.get('reminder_date', '')}`\n\n"
-            "⏰ **مرحله ۲ از ۳ - انتخاب ساعت**",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    else:
-        await update.message.reply_text(
-            "⏰ **مرحله ۲ از ۳ - انتخاب ساعت**",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    await query.edit_message_text(
+        f"📅 تاریخ: `{context.user_data['reminder_date']}`\n\n"
+        "⏰ **ساعت مورد نظر را انتخاب کنید:**",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
     return TIME
 
-async def time_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quick_time_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش انتخاب ساعت"""
     query = update.callback_query
     await query.answer()
@@ -115,12 +85,10 @@ async def time_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data['reminder_time'] = data
     
-    # رفتن به مرحله عنوان
     await query.edit_message_text(
-        f"📅 تاریخ: `{context.user_data.get('reminder_date', '')}`\n"
+        f"📅 تاریخ: `{context.user_data['reminder_date']}`\n"
         f"⏰ ساعت: `{data}`\n\n"
-        "📝 **مرحله ۳ از ۳**\n"
-        "لطفاً عنوان یادآوری را وارد کنید:"
+        "📝 **عنوان یادآوری را وارد کنید:**"
     )
     return TITLE
 
@@ -132,23 +100,22 @@ async def get_manual_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['reminder_date'] = date_str
         await update.message.delete()
         
-        # نمایش انتخاب ساعت
-        keyboard = []
-        row = []
-        for label, time in QUICK_TIMES:
-            row.append(InlineKeyboardButton(label, callback_data=f"time_{time}"))
-            if len(row) == 2:
-                keyboard.append(row)
-                row = []
-        if row:
-            keyboard.append(row)
-        
-        keyboard.append([InlineKeyboardButton("⏰ انتخاب دستی", callback_data="time_manual")])
-        keyboard.append([InlineKeyboardButton("🔙 بازگشت به تاریخ", callback_data="back_to_date")])
+        keyboard = [
+            [InlineKeyboardButton("⏰ ۸:۰۰", callback_data="time_08:00"),
+             InlineKeyboardButton("⏰ ۱۰:۰۰", callback_data="time_10:00")],
+            [InlineKeyboardButton("⏰ ۱۲:۰۰", callback_data="time_12:00"),
+             InlineKeyboardButton("⏰ ۱۴:۰۰", callback_data="time_14:00")],
+            [InlineKeyboardButton("⏰ ۱۶:۰۰", callback_data="time_16:00"),
+             InlineKeyboardButton("⏰ ۱۸:۰۰", callback_data="time_18:00")],
+            [InlineKeyboardButton("⏰ ۲۰:۰۰", callback_data="time_20:00"),
+             InlineKeyboardButton("⏰ ۲۲:۰۰", callback_data="time_22:00")],
+            [InlineKeyboardButton("✏️ تنظیم دستی", callback_data="time_manual")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_date")]
+        ]
         
         await update.message.reply_text(
-            f"📅 تاریخ انتخاب‌شده: `{date_str}`\n\n"
-            "⏰ **مرحله ۲ از ۳ - انتخاب ساعت**",
+            f"📅 تاریخ: `{date_str}`\n\n"
+            "⏰ **ساعت مورد نظر را انتخاب کنید:**",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return TIME
@@ -169,10 +136,9 @@ async def get_manual_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
         
         await update.message.reply_text(
-            f"📅 تاریخ: `{context.user_data.get('reminder_date', '')}`\n"
+            f"📅 تاریخ: `{context.user_data['reminder_date']}`\n"
             f"⏰ ساعت: `{time_str}`\n\n"
-            "📝 **مرحله ۳ از ۳**\n"
-            "لطفاً عنوان یادآوری را وارد کنید:"
+            "📝 **عنوان یادآوری را وارد کنید:**"
         )
         return TITLE
     except:
@@ -231,8 +197,29 @@ async def get_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     return ConversationHandler.END
 
+async def back_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """بازگشت به انتخاب تاریخ"""
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [
+        [InlineKeyboardButton("📅 امروز", callback_data="quick_today")],
+        [InlineKeyboardButton("📅 فردا", callback_data="quick_tomorrow")],
+        [InlineKeyboardButton("📅 ۳ روز بعد", callback_data="quick_3days")],
+        [InlineKeyboardButton("📅 ۱ هفته بعد", callback_data="quick_7days")],
+        [InlineKeyboardButton("✏️ تنظیم دستی", callback_data="quick_manual")],
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]
+    ]
+    
+    await query.edit_message_text(
+        "⏰ **تنظیم یادآوری**\n\n"
+        "لطفاً تاریخ را انتخاب کنید:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return DATE
+
 async def list_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش لیست یادآوری‌های فعال"""
+    """نمایش لیست یادآوری‌ها"""
     user_id = update.effective_user.id
     db = SessionLocal()
     reminders = db.query(Reminder).filter_by(user_id=user_id, is_active=True).all()
@@ -242,7 +229,7 @@ async def list_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📭 **هیچ یادآوری فعالی ندارید!**")
         return
     
-    text = "📋 **لیست یادآوری‌های فعال:**\n\n"
+    text = "📋 **یادآوری‌های فعال:**\n\n"
     for i, r in enumerate(reminders[:10], 1):
         time_str = r.remind_time.strftime("%Y-%m-%d %H:%M")
         text += f"{i}. {r.title}\n   ⏰ {time_str}\n   🆔 شناسه: `{r.id}`\n\n"
@@ -254,10 +241,7 @@ async def cancel_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """لغو یادآوری"""
     try:
         if not context.args:
-            await update.message.reply_text(
-                "❌ لطفاً شناسه را وارد کنید.\n"
-                "مثال: /cancel_reminder 5"
-            )
+            await update.message.reply_text("❌ لطفاً شناسه را وارد کنید.\nمثال: /cancel_reminder 5")
             return
         
         reminder_id = int(context.args[0])
@@ -278,27 +262,3 @@ async def cancel_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ شناسه باید عدد باشد.")
     except Exception as e:
         await update.message.reply_text(f"❌ خطا: {str(e)}")
-
-async def back_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """بازگشت به انتخاب تاریخ"""
-    query = update.callback_query
-    await query.answer()
-    
-    keyboard = []
-    row = []
-    for label, days in QUICK_DATES:
-        row.append(InlineKeyboardButton(label, callback_data=f"date_{days}"))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-    
-    keyboard.append([InlineKeyboardButton("📅 انتخاب دستی", callback_data="date_manual")])
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")])
-    
-    await query.edit_message_text(
-        "📅 **انتخاب تاریخ**",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    return DATE
