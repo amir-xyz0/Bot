@@ -2,91 +2,112 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
+from datetime import datetime, timedelta
 import json
-from datetime import datetime
 
 async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # کاربر با /mood خوب یا /mood بد ثبت می‌کنه
+    """ثبت احساس از طریق اعلان شب"""
+    query = update.callback_query
+    await query.answer()
     user_id = update.effective_user.id
-    mood = context.args[0] if context.args else "خوب"
+    mood = query.data.replace("mood_", "")
     
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
-    if not user:
-        await update.message.reply_text("❌ اول /start رو بزن!")
-        db.close()
-        return
-    
-    history = user.mood_history or []
-    history.append({
-        "date": datetime.now().isoformat(),
-        "mood": mood,
-        "note": " ".join(context.args[1:]) if len(context.args) > 1 else ""
-    })
-    user.mood_history = history
-    db.commit()
+    if user:
+        history = user.mood_history or []
+        history.append({
+            "date": datetime.now().isoformat(),
+            "mood": mood,
+            "note": ""
+        })
+        user.mood_history = history
+        db.commit()
     db.close()
     
-    await update.message.reply_text(f"✅ حالت امروز {mood} ثبت شد! 🙏")
+    await query.edit_message_text(
+        f"✅ احساس امروز شما ثبت شد!\n\n"
+        f"حالت: {'😊 خوب' if mood == 'good' else '😐 معمولی' if mood == 'normal' else '😔 بد'}"
+    )
 
 async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """نمایش تاریخچه و تحلیل"""
     user_id = update.effective_user.id
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
     
     if not user or not user.mood_history:
-        await update.message.reply_text("📭 هنوز هیچ احساسی ثبت نکردی!\nبا دستور /mood خوب یا /mood بد حالت رو ثبت کن.")
+        text = "📭 **هنوز هیچ احساسی ثبت نکردی!**\n\nشب‌ها وقتی پیام شب بخیر می‌رسد، ازت می‌پرسم روزت چطور بوده. با ثبت احساساتت، می‌تونم بهتر کمکت کنم."
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
+        await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
     
-    history = user.mood_history[-7:]  # ۷ روز اخیر
-    text = "📊 **تاریخچه‌ی ۷ روز اخیر:**\n\n"
+    history = user.mood_history[-14:]  # ۱۴ روز اخیر
     
-    mood_count = {"خوب": 0, "بد": 0, "معمولی": 0}
+    # تحلیل احساسات
+    mood_count = {"good": 0, "normal": 0, "bad": 0}
     for h in history:
-        mood = h.get("mood", "معمولی")
+        mood = h.get("mood", "normal")
         mood_count[mood] = mood_count.get(mood, 0) + 1
-        date = datetime.fromisoformat(h["date"]).strftime("%Y-%m-%d")
-        note = h.get("note", "")
-        text += f"• {date}: {mood} {note}\n"
     
-    text += f"\n📈 **تحلیل:**\n"
     total = len(history)
-    good_percent = (mood_count["خوب"] / total * 100) if total > 0 else 0
+    good_percent = (mood_count["good"] / total * 100) if total > 0 else 0
+    bad_percent = (mood_count["bad"] / total * 100) if total > 0 else 0
     
-    if good_percent > 60:
-        text += "🌟 این روزها روحیه‌ات عالیه! ادامه بده!"
-    elif good_percent > 40:
-        text += "🌿 روزهای خوب و بد رو داری. به خودت فرصت بده."
+    # تولید تحلیل
+    analysis = ""
+    if good_percent > 70:
+        analysis = "🌟 وضعیت روحی شما عالی است! این روند را حفظ کنید. پیشنهاد می‌کنم امروز هم کارهای خوبی که باعث شادی‌تان می‌شود را ادامه دهید."
+    elif good_percent > 50:
+        analysis = "🌿 روحیه‌تان نسبتاً خوب است. روزهای خوب و بدی دارید. سعی کنید روزهای خوب را بیشتر کنید."
+    elif bad_percent > 60:
+        analysis = "💔 این روزها سخت بوده. یادتان باشد که تنها نیستید. پیشنهاد می‌کنم امروز یک پیاده‌روی کوتاه بروید، با یک دوست صحبت کنید، یا به موسیقی آرامش‌بخش گوش دهید. به خودتان سخت نگیرید."
     else:
-        text += "💪 این روزها سخت بوده. یادت باشه تنها نیستی، من اینجام."
+        analysis = "🌈 احساسات شما متعادل است. برای بهبود روحیه، سعی کنید هر روز چند دقیقه به کارهای خوبی که انجام داده‌اید فکر کنید."
+    
+    # نمایش تاریخچه
+    history_text = "📊 **تاریخچه احساسات (۱۴ روز اخیر):**\n\n"
+    for h in history[-7:]:
+        date = datetime.fromisoformat(h["date"]).strftime("%Y-%m-%d")
+        mood = h.get("mood", "normal")
+        mood_emoji = "😊" if mood == "good" else "😐" if mood == "normal" else "😔"
+        history_text += f"• {date}: {mood_emoji}\n"
+    
+    full_text = history_text + f"\n**تحلیل:**\n{analysis}"
     
     keyboard = [
-        [InlineKeyboardButton("📝 ثبت احساس جدید", callback_data="record_mood")],
-        [InlineKeyboardButton("📋 تاریخچه کامل", callback_data="full_history")]
+        [InlineKeyboardButton("📋 تاریخچه کامل", callback_data="full_history")],
+        [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
     ]
     
-    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text(full_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
-    
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
     
     if not user or not user.mood_history:
-        await query.edit_message_text("📭 هیچ تاریخی وجود نداره!")
+        await query.edit_message_text("📭 تاریخچه‌ای وجود ندارد.")
         return
     
-    all_history = user.mood_history
-    text = "📋 **تاریخچه‌ی کامل:**\n\n"
-    for h in all_history[-20:]:  # آخرین ۲۰ مورد
-        date = datetime.fromisoformat(h["date"]).strftime("%Y-%m-%d %H:%M")
-        mood = h.get("mood", "معمولی")
-        note = h.get("note", "")
-        text += f"• {date}: {mood} {note}\n"
+    history = user.mood_history[-30:]
+    text = "📋 **تاریخچه کامل (۳۰ روز اخیر):**\n\n"
+    for h in history:
+        date = datetime.fromisoformat(h["date"]).strftime("%Y-%m-%d")
+        mood = h.get("mood", "normal")
+        mood_emoji = "😊" if mood == "good" else "😐" if mood == "normal" else "😔"
+        text += f"• {date}: {mood_emoji}\n"
     
-    await query.edit_message_text(text)
+    text += f"\n🔙 بازگشت به منو"
+    
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
+        ])
+    )
