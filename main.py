@@ -19,18 +19,10 @@ Base.metadata.create_all(engine)
 
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ===== منو =====
-app.add_handler(CommandHandler("menu", menu.main_menu))
-app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
-app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
-app.add_handler(CallbackQueryHandler(menu.reminder_menu, pattern="reminder_menu"))
-app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
-app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
-
 # ===== استارت =====
 app.add_handler(CommandHandler("start", start.start))
 
-# ===== پروفایل =====
+# ===== پروفایل (ConversationHandler - اولویت بالاتر) =====
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -39,15 +31,26 @@ conv_handler = ConversationHandler(
         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
-    fallbacks=[],
-    per_message=True
+    fallbacks=[
+        CommandHandler("start", start.start),
+        CommandHandler("cancel", start.start)
+    ],
+    per_message=False  # ✅ این خیلی مهمه
 )
 app.add_handler(conv_handler)
 
-# ===== چت =====
+# ===== منو =====
+app.add_handler(CommandHandler("menu", menu.main_menu))
+app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
+app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
+app.add_handler(CallbackQueryHandler(menu.reminder_menu, pattern="reminder_menu"))
+app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
+app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
+
+# ===== چت (آخرین اولویت) =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
-# ===== وب سرور برای رندر (با پشتیبانی HEAD) =====
+# ===== وب سرور برای رندر =====
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
