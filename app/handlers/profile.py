@@ -13,7 +13,6 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["preferred_name"] = update.message.text
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
@@ -83,28 +82,3 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text("✅ ثبت‌نام با موفقیت انجام شد.")
     await main_menu(update, context)
     return ConversationHandler.END
-
-async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db = SessionLocal()
-    user = db.query(User).filter_by(user_id=user_id).first()
-    db.close()
-
-    if not user:
-        await update.message.reply_text("شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
-        return
-
-    gender_map = {"male": "مرد", "female": "زن"}
-    style_map = {"friendly": "دوستانه", "formal": "رسمی", "funny": "طنز", "calm": "آرام"}
-
-    text = (
-        f"👤 **پروفایل شما**\n\n"
-        f"نام: {user.preferred_name}\n"
-        f"جنسیت: {gender_map.get(user.gender, 'نامشخص')}\n"
-        f"سن: {user.age}\n"
-        f"لحن: {style_map.get(user.chat_style, 'نامشخص')}\n"
-        f"وضعیت: {'💎 پریمیوم' if user.is_premium else '🆓 رایگان'}"
-    )
-
-    keyboard = [[InlineKeyboardButton("بازگشت به منو", callback_data="main_menu")]]
-    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
