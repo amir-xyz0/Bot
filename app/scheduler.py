@@ -16,10 +16,10 @@ async def send_morning_messages():
         try:
             await bot.send_message(
                 chat_id=user.user_id,
-                text="صبح بخیر! روز خوبی را برای شما آرزو میکنم."
+                text="🌅 صبح بخیر! روز خوبی را برای شما آرزو میکنم."
             )
-        except Exception as e:
-            print(f"Error sending morning message to {user.user_id}: {e}")
+        except:
+            pass
     db.close()
 
 async def send_night_messages():
@@ -30,10 +30,10 @@ async def send_night_messages():
         try:
             await bot.send_message(
                 chat_id=user.user_id,
-                text="شب بخیر! خواب آرامی داشته باشید."
+                text="🌙 شب بخیر! خواب آرامی داشته باشید."
             )
-        except Exception as e:
-            print(f"Error sending night message to {user.user_id}: {e}")
+        except:
+            pass
     db.close()
 
 def morning_wrapper():
