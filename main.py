@@ -1,5 +1,4 @@
 import logging
-import os
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram.ext import (
@@ -11,7 +10,7 @@ from telegram.ext import (
     filters
 )
 from app.config import config
-from app.handlers import start, profile, chat, menu
+from app.handlers import start, profile, menu, chat
 from app.database import Base, engine
 from app.scheduler import scheduler
 
@@ -44,17 +43,20 @@ conv_handler = ConversationHandler(
     per_message=True
 )
 app.add_handler(conv_handler)
-app.add_handler(CommandHandler("profile", profile.show_profile))
 
-# ===== چت (فقط در بخش چت) =====
+# ===== چت =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
-# ===== وب سرور برای رندر =====
+# ===== وب سرور برای رندر (با پشتیبانی HEAD) =====
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"Bot is running!")
+    
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
 
 def run_http_server():
     server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
@@ -68,4 +70,4 @@ scheduler.start()
 # ===== اجرا با تنظیمات دقیق Polling =====
 if __name__ == "__main__":
     print("ربات راه‌اندازی شد!")
-    app.run_polling(poll_interval=5.0, timeout=30, allowed_updates=None)
+    app.run_polling(poll_interval=3.0, timeout=20, allowed_updates=None)
