@@ -10,14 +10,14 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = update.message
 
     keyboard = [
-        [InlineKeyboardButton("گفتگو با دستیار", callback_data="chat_menu")],
-        [InlineKeyboardButton("یادآوری‌ها", callback_data="reminder_menu")],
-        [InlineKeyboardButton("تاریخچه احساسات", callback_data="history_menu")],
-        [InlineKeyboardButton("پروفایل", callback_data="profile_menu")]
+        [InlineKeyboardButton("💬 گفتگو با دستیار", callback_data="chat_menu")],
+        [InlineKeyboardButton("⏰ یادآوری‌ها", callback_data="reminder_menu")],
+        [InlineKeyboardButton("📊 تاریخچه احساسات", callback_data="history_menu")],
+        [InlineKeyboardButton("👤 پروفایل", callback_data="profile_menu")]
     ]
-    
-    text = "منوی اصلی:\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید."
-    
+
+    text = "📋 **منوی اصلی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید."
+
     if query:
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     else:
@@ -26,42 +26,40 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    context.user_data['current_section'] = 'chat'
     await query.edit_message_text(
-        "بخش گفتگو با دستیار:\n"
+        "💬 **بخش گفتگو با دستیار**\n\n"
         "هر سوالی دارید، بپرسید.\n"
         "برای بازگشت به منو، دکمه زیر را بزنید.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("بازگشت به منو", callback_data="main_menu")]
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ])
     )
-    context.user_data['current_section'] = 'chat'
 
 async def reminder_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "بخش یادآوری‌ها:\n"
-        "برای تنظیم یادآوری، دکمه زیر را بزنید.",
+        "⏰ **بخش یادآوری‌ها**\n\n"
+        "برای تنظیم یادآوری جدید، از دکمه زیر استفاده کنید.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("تنظیم یادآوری جدید", callback_data="set_reminder")],
-            [InlineKeyboardButton("بازگشت به منو", callback_data="main_menu")]
+            [InlineKeyboardButton("➕ تنظیم یادآوری جدید", callback_data="set_reminder")],
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ])
     )
-    context.user_data['current_section'] = 'reminder'
 
 async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "بخش تاریخچه احساسات:\n"
+        "📊 **بخش تاریخچه احساسات**\n\n"
         "برای ثبت احساس امروز یا مشاهده تاریخچه، از دکمه‌های زیر استفاده کنید.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("ثبت احساس امروز", callback_data="record_mood")],
-            [InlineKeyboardButton("مشاهده تاریخچه", callback_data="show_history")],
-            [InlineKeyboardButton("بازگشت به منو", callback_data="main_menu")]
+            [InlineKeyboardButton("😊 ثبت احساس امروز", callback_data="record_mood")],
+            [InlineKeyboardButton("📋 مشاهده تاریخچه", callback_data="show_history")],
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ])
     )
-    context.user_data['current_section'] = 'history'
 
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from app.handlers import profile
