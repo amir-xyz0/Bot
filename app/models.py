@@ -8,9 +8,10 @@ class User(Base):
     preferred_name = Column(String(100))
     gender = Column(String(20))
     age = Column(Integer)
-    chat_style = Column(String(50), default="دوستانه")
-    mood_history = Column(JSON, default=list)  # [{"date": "2025-01-01", "mood": "good", "note": "..."}]
+    chat_style = Column(String(50), default="friendly")
+    mood_history = Column(JSON, default=list)  # [{"date": "2025-01-01", "mood": "good", "note": ""}]
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_activity = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     is_active = Column(Boolean, default=True)
     is_premium = Column(Boolean, default=False)
     premium_expiry = Column(DateTime(timezone=True), nullable=True)
@@ -26,12 +27,3 @@ class Reminder(Base):
     remind_time = Column(DateTime(timezone=True), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-class Transaction(Base):
-    __tablename__ = "transactions"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(BigInteger, nullable=False, index=True)
-    amount = Column(Float, nullable=False)
-    category = Column(String(50))  # خوراک، حمل‌ونقل، تفریح، قبوض، خرید، سلامت، آموزش، سایر
-    description = Column(Text)
-    date = Column(DateTime(timezone=True), server_default=func.now())
