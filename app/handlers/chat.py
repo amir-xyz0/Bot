@@ -6,21 +6,32 @@ from app.database import SessionLocal
 from app.models import User
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get('current_section') != 'chat':
-        await update.message.reply_text("لطفاً ابتدا از منو، بخش گفتگو را انتخاب کنید.")
-        return
-
     user_id = update.effective_user.id
-    user_message = update.message.text
-
+    
+    # چک کن که کاربر ثبت‌نام کرده یا نه
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
-    style = user.chat_style if user else "friendly"
     db.close()
+    
+    if not user:
+        await update.message.reply_text(
+            "❗ شما ثبت‌نام نکرده‌اید.\n"
+            "لطفاً /start را بزنید و ثبت‌نام را کامل کنید."
+        )
+        return
+    
+    if context.user_data.get('current_section') != 'chat':
+        await update.message.reply_text(
+            "💡 لطفاً ابتدا از منوی اصلی، بخش «گفتگو با دستیار» را انتخاب کنید.",
+            reply_markup=None
+        )
+        return
+
+    user_message = update.message.text
 
     payload = {
         "messages": [{"role": "user", "content": user_message}],
-        "system_prompt": f"تو یک دستیار {style} هستی.",
+        "system_prompt": f"تو یک دستیار {user.chat_style} هستی.",
         "temperature": 0.9,
         "top_k": 5,
         "top_p": 0.9,
