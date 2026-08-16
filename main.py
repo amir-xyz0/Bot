@@ -26,7 +26,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ===== Error Handler =====
+# ============================================================
+# Error Handler
+# ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """مدیریت خطاهای ثبت‌نشده"""
     logger.error(msg="⚠️ خطا در به‌روزرسانی:", exc_info=context.error)
@@ -43,15 +45,19 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         except:
             pass
 
-# ===== ساخت اپلیکیشن =====
+# ============================================================
+# ساخت اپلیکیشن
+# ============================================================
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ===== ثبت هندلرها =====
-
+# ============================================================
 # 1. استارت
+# ============================================================
 app.add_handler(CommandHandler("start", start.start))
 
-# 2. ثبت‌نام
+# ============================================================
+# 2. ثبت‌نام (پروفایل) - ConversationHandler
+# ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -65,14 +71,18 @@ conv_handler = ConversationHandler(
 )
 app.add_handler(conv_handler)
 
-# 3. منو
+# ============================================================
+# 3. منوی اصلی
+# ============================================================
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
+# ============================================================
 # 4. ویرایش پروفایل
+# ============================================================
 app.add_handler(CallbackQueryHandler(profile_edit.edit_name, pattern="edit_name"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_gender, pattern="edit_gender"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_gender, pattern="set_gender_"))
@@ -83,18 +93,26 @@ app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="e
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, profile_edit.handle_edit_input))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
+# ============================================================
 # 5. تاریخچه احساسات
+# ============================================================
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 app.add_handler(CommandHandler("history", history.show_history))
 
-# 6. چت
+# ============================================================
+# 6. گفتگو با دستیار (MessageHandler عمومی - آخرین اولویت)
+# ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
-# ===== ثبت Error Handler =====
+# ============================================================
+# ثبت Error Handler
+# ============================================================
 app.add_error_handler(error_handler)
 
-# ===== وب سرور برای Render =====
+# ============================================================
+# وب سرور برای Render (جلوگیری از خوابیدن سرویس)
+# ============================================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -111,11 +129,16 @@ def run_http_server():
 
 threading.Thread(target=run_http_server, daemon=True).start()
 
-# ===== Scheduler =====
+# ============================================================
+# راه‌اندازی Scheduler (ارسال پیام‌های خودکار)
+# ============================================================
 start_scheduler()
 
-# ===== اجرا =====
+# ============================================================
+# اجرای اصلی ربات
+# ============================================================
 if __name__ == "__main__":
     print("🚀 ربات دستیار هوشمند راه‌اندازی شد!")
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
-    app.run_polling(poll_interval=1.0, timeout=10, allowed_updates=None)
+    # poll_interval=2.0 برای کاهش ترافیک و timeout=10 برای پاسخ‌دهی سریع‌تر
+    app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
