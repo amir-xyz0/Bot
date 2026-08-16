@@ -5,18 +5,16 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query:
         await query.answer()
-        # حذف پیام قبلی
+        message = query.message
         try:
-            await query.message.delete()
+            await message.delete()
         except:
             pass
-        message = await query.message.reply_text("⏳ در حال بارگذاری...")
     else:
         message = update.message
 
     keyboard = [
         [InlineKeyboardButton("💬 گفتگو با دستیار", callback_data="chat_menu")],
-        [InlineKeyboardButton("⏰ یادآوری‌ها", callback_data="reminder_menu")],
         [InlineKeyboardButton("📊 تاریخچه احساسات", callback_data="history_menu")],
         [InlineKeyboardButton("👤 پروفایل", callback_data="profile_menu")]
     ]
@@ -32,7 +30,6 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data['current_section'] = 'chat'
-    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
@@ -46,32 +43,9 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
     )
 
-async def reminder_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    # حذف پیام قبلی
-    try:
-        await query.message.delete()
-    except:
-        pass
-    await query.message.reply_text(
-        "⏰ **بخش یادآوری‌ها**\n\n"
-        "برای تنظیم یادآوری جدید، دستور /remind را بزنید.\n"
-        "برای دیدن لیست: /listreminders\n"
-        "برای لغو: /cancel_reminder [شناسه]",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
-        ])
-    )
-
 async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    # حذف پیام قبلی
-    try:
-        await query.message.delete()
-    except:
-        pass
     from app.handlers import history
     await history.show_history(update, context)
 
