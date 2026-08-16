@@ -42,7 +42,7 @@ conv_handler = ConversationHandler(
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
     fallbacks=[CommandHandler("start", start.start)],
-    per_message=True
+    per_message=False
 )
 app.add_handler(conv_handler)
 
