@@ -1,19 +1,19 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from app.config import config
 from app.database import SessionLocal
 from app.models import User
 from app.data.health_messages import HEALTH_MESSAGES
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Tehran"))
 
 async def send_morning_messages():
-    """ارسال پیام صبح بخیر + سلامت (فقط ساعت ۷ صبح)"""
     try:
         bot = Bot(token=config.BOT_TOKEN)
         db = SessionLocal()
@@ -61,7 +61,6 @@ async def send_morning_messages():
         logger.error(f"خطا در send_morning_messages: {e}")
 
 async def send_night_messages():
-    """ارسال پیام شب بخیر + پرسش از احساسات"""
     try:
         bot = Bot(token=config.BOT_TOKEN)
         db = SessionLocal()
@@ -100,11 +99,9 @@ async def send_night_messages():
         logger.error(f"خطا در send_night_messages: {e}")
 
 async def check_absent_users():
-    """بررسی کاربرانی که ۳ روز سر نزده‌اند"""
     try:
         bot = Bot(token=config.BOT_TOKEN)
         db = SessionLocal()
-        from datetime import timedelta
         three_days_ago = datetime.now(pytz.timezone("Asia/Tehran")) - timedelta(days=3)
         users = db.query(User).filter(User.last_activity < three_days_ago).all()
         
@@ -128,7 +125,6 @@ async def check_absent_users():
         logger.error(f"خطا در check_absent_users: {e}")
 
 def start_scheduler():
-    """راه‌اندازی scheduler با تنظیمات دقیق"""
     try:
         scheduler.remove_all_jobs()
         
