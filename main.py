@@ -99,4 +99,3 @@ if __name__ == "__main__":
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
     # تنظیمات بهینه برای کاهش Conflict
     app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
-    
