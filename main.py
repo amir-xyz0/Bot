@@ -29,12 +29,18 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
         try:
-            await update.effective_message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+            await update.effective_message.reply_text("❌ خطایی رخ داد.")
         except:
             pass
 
+# ===== تست echo (برای تشخیص مشکل MessageHandler) =====
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 echo: پیامی دریافت شد!")
+    await update.message.reply_text(f"echo: {update.message.text}")
+
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
+# ===== هندلرها =====
 app.add_handler(CommandHandler("start", start.start))
 
 conv_handler = ConversationHandler(
@@ -70,11 +76,14 @@ app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 app.add_handler(CommandHandler("history", history.show_history))
 
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+# ===== MessageHandler برای تست echo =====
+# برای تست، این خط رو فعال کن و خط بعدی رو غیرفعال کن
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+# app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
 app.add_error_handler(error_handler)
 
-# ===== وب سرور برای Render =====
+# ===== وب سرور =====
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -97,5 +106,4 @@ start_scheduler()
 if __name__ == "__main__":
     print("🚀 ربات با Polling راه‌اندازی شد!")
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
-    # تنظیمات بهینه برای کاهش Conflict
     app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
