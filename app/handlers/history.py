@@ -7,7 +7,7 @@ from datetime import datetime
 async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # حذف پیام قبلی
+    # حذف پیام قبلی (اگر از callback آمده باشد)
     if update.callback_query:
         query = update.callback_query
         await query.answer()
@@ -15,28 +15,30 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.delete()
         except:
             pass
-        message = await query.message.reply_text("⏳ در حال بارگذاری تاریخچه...")
-    else:
-        message = update.message
+    
+    # ارسال پیام لودینگ
+    loading_msg = await update.effective_message.reply_text("⏳ در حال بارگذاری تاریخچه...")
     
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
     
     if not user:
-        await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
+        await loading_msg.delete()
+        await update.effective_message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
     
     history = user.mood_history or []
     
     if not history:
+        await loading_msg.delete()
         text = (
             "📭 **هنوز هیچ احساسی ثبت نکردی!**\n\n"
             "هر شب ساعت ۲۳، ازت می‌پرسم روزت چطور بوده.\n"
             "با ثبت احساساتت، می‌تونم بهتر کمکت کنم."
         )
         keyboard = [[InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]]
-        await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.effective_message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
     
     recent = history[-14:]
@@ -51,11 +53,11 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     analysis = ""
     if good_pct > 70:
-        analysis = "🌟 **روحیه‌ات عالیه!** ادامه بده."
+        analysis = "🌟 **روحیه‌ات عالیه!** ادامه بده. امروز هم کارهای خوبی که دوست داری رو انجام بده."
     elif good_pct > 50:
-        analysis = "🌿 **روحیه‌ات نسبتاً خوبه.** روزهای خوب و بد داری."
+        analysis = "🌿 **روحیه‌ات نسبتاً خوبه.** روزهای خوب و بد داری. سعی کن روزهای خوب رو بیشتر کنی."
     elif bad_pct > 60:
-        analysis = "💔 **این روزها سخت بوده.** تنها نیستی. یه پیاده‌روی برو، با یه دوست صحبت کن."
+        analysis = "💔 **این روزها سخت بوده.** تنها نیستی. یه پیاده‌روی برو، با یه دوست صحبت کن، یا به موسیقی گوش بده. به خودت سخت نگیر."
     else:
         analysis = "🌈 **احساساتت متعادله.** برای بهبود روحیه، هر روز به کارهای خوبی که انجام دادی فکر کن."
     
@@ -73,11 +75,8 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]
     ]
     
-    # حذف پیام لودینگ
-    try:
-        await message.delete()
-    except:
-        pass
+    # ✅ حذف پیام لودینگ قبل از ارسال پاسخ نهایی
+    await loading_msg.delete()
     
     await update.effective_message.reply_text(full_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -140,4 +139,4 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ احساس امروز ثبت شد!\n\n"
         f"حالت: {emoji}\n"
         f"شب بخیر و خواب آرام 🌙"
-        )
+    )
