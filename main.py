@@ -1,6 +1,7 @@
 import logging
 import traceback
-import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -15,6 +16,8 @@ from app.config import config
 from app.handlers import start, profile, menu, chat, history, profile_edit
 from app.database import Base, engine
 from app.scheduler import start_scheduler
+from datetime import datetime
+import pytz
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -22,7 +25,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ===== Error Handler =====
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -31,10 +33,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         except:
             pass
 
-# ===== ساخت اپلیکیشن =====
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ===== ثبت هندلرها =====
 app.add_handler(CommandHandler("start", start.start))
 
 conv_handler = ConversationHandler(
@@ -74,16 +74,29 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_a
 
 app.add_error_handler(error_handler)
 
-# ===== راه‌اندازی Scheduler =====
+# ===== وب سرور برای Render =====
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
+def run_http_server():
+    server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
+    server.serve_forever()
+
+threading.Thread(target=run_http_server, daemon=True).start()
+
+# ===== Scheduler =====
 start_scheduler()
 
-# ===== اجرا با Webhook =====
+# ===== اجرا =====
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    print(f"🚀 ربات با Webhook روی پورت {port} راه‌اندازی شد!")
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=config.BOT_TOKEN,
-        webhook_url=f"https://life-assistant-bot-24ef7.onrender.com/{config.BOT_TOKEN}"
-    )
+    print("🚀 ربات با Polling راه‌اندازی شد!")
+    print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
+    # تنظیمات بهینه برای کاهش Conflict
+    app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
+    
