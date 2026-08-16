@@ -2,19 +2,15 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
 
 async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش تاریخچه احساسات با تحلیل"""
     user_id = update.effective_user.id
     
-    # چک کردن نوع درخواست
     if update.callback_query:
         query = update.callback_query
         await query.answer()
         message = query.message
-        # حذف پیام قبلی
         try:
             await message.delete()
         except:
@@ -27,13 +23,9 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
     
     if not user:
-        await message.reply_text(
-            "❗ شما ثبت‌نام نکرده‌اید.\n"
-            "لطفاً /start را بزنید."
-        )
+        await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
     
-    # دریافت تاریخچه
     history = user.mood_history or []
     
     if not history:
@@ -46,7 +38,6 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
     
-    # تحلیل ۱۴ روز اخیر
     recent = history[-14:]
     mood_count = {"good": 0, "normal": 0, "bad": 0}
     for h in recent:
@@ -57,7 +48,6 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     good_pct = (mood_count["good"] / total * 100) if total > 0 else 0
     bad_pct = (mood_count["bad"] / total * 100) if total > 0 else 0
     
-    # تولید تحلیل
     analysis = ""
     if good_pct > 70:
         analysis = "🌟 **روحیه‌ات عالیه!** ادامه بده. امروز هم کارهای خوبی که دوست داری رو انجام بده."
@@ -68,7 +58,6 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         analysis = "🌈 **احساساتت متعادله.** برای بهبود روحیه، هر روز به کارهای خوبی که انجام دادی فکر کن."
     
-    # نمایش تاریخچه
     history_text = "📊 **۱۴ روز اخیر:**\n\n"
     for h in recent[-7:]:
         date = datetime.fromisoformat(h["date"]).strftime("%Y-%m-%d")
@@ -86,7 +75,6 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text(full_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش تاریخچه کامل"""
     query = update.callback_query
     await query.answer()
     await query.message.delete()
@@ -112,7 +100,6 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """ثبت احساس از اعلان شب"""
     query = update.callback_query
     await query.answer()
     mood = query.data.replace("mood_", "")
@@ -132,7 +119,6 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
     db.close()
     
-    # حذف پیام دکمه‌ها
     try:
         await query.message.delete()
     except:
