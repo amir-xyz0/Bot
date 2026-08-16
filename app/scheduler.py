@@ -1,122 +1,156 @@
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.date import DateTrigger
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from telegram import Bot
 from app.config import config
 from app.database import SessionLocal
-from app.models import User, Reminder
-from app.messages import get_morning_message, get_night_message, get_absent_message
+from app.models import User
+from app.data.health_messages import HEALTH_MESSAGES
+from datetime import datetime
 import pytz
-import asyncio
-from datetime import datetime, timedelta
+import logging
 
-scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Tehran"))
+logger = logging.getLogger(__name__)
+scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Tehran"))
 
 async def send_morning_messages():
-    """ارسال پیام صبح بخیر + انگیزشی"""
-    bot = Bot(token=config.BOT_TOKEN)
-    db = SessionLocal()
-    users = db.query(User).filter_by(morning_msg_enabled=True, is_active=True).all()
-    
-    for user in users:
-        try:
-            text = (
-                f"🌅 **صبح بخیر {user.preferred_name}!**\n\n"
-                f"{get_morning_message(user.gender)}\n\n"
-                f"امیدوارم امروز روز خوبی داشته باشی. 🌟"
-            )
-            await bot.send_message(chat_id=user.user_id, text=text)
-        except Exception as e:
-            print(f"Error sending morning to {user.user_id}: {e}")
-    db.close()
+    """ارسال پیام صبح بخیر + سلامت (فقط ساعت ۷ صبح)"""
+    try:
+        bot = Bot(token=config.BOT_TOKEN)
+        db = SessionLocal()
+        users = db.query(User).filter_by(health_msg_enabled=True, is_active=True).all()
+        
+        logger.info(f"ارسال پیام صبح به {len(users)} کاربر")
+        
+        for user in users:
+            try:
+                sent = user.sent_health_messages or []
+                if sent:
+                    last_day = max([m.get("day", 0) for m in sent])
+                    next_day = (last_day % 30) + 1
+                else:
+                    next_day = 1
+                
+                message_data = HEALTH_MESSAGES[next_day - 1]
+                
+                text = (
+                    f"🌅 **صبح بخیر {user.preferred_name}!**\n\n"
+                    f"📌 **روز {next_day} از ۳۰**\n"
+                    f"**{message_data['title']}**\n\n"
+                    f"{message_data['message']}\n\n"
+                    f"💪 برای سلامتی‌ات ارزش قائل شو!"
+                )
+                await bot.send_message(chat_id=user.user_id, text=text)
+                
+                sent.append({
+                    "date": datetime.now().isoformat(),
+                    "day": next_day,
+                    "title": message_data['title'],
+                    "message": message_data['message']
+                })
+                user.sent_health_messages = sent
+                db.commit()
+                logger.info(f"پیام صبح به {user.user_id} ارسال شد")
+                
+            except Exception as e:
+                logger.error(f"خطا در ارسال به {user.user_id}: {e}")
+        
+        db.close()
+        logger.info("ارسال پیام صبح تکمیل شد")
+        
+    except Exception as e:
+        logger.error(f"خطا در send_morning_messages: {e}")
 
 async def send_night_messages():
     """ارسال پیام شب بخیر + پرسش از احساسات"""
-    bot = Bot(token=config.BOT_TOKEN)
-    db = SessionLocal()
-    users = db.query(User).filter_by(night_msg_enabled=True, is_active=True).all()
-    
-    for user in users:
-        try:
-            keyboard = [
-                [
-                    InlineKeyboardButton("😊 خوب", callback_data="mood_good"),
-                    InlineKeyboardButton("😐 معمولی", callback_data="mood_normal"),
-                    InlineKeyboardButton("😔 بد", callback_data="mood_bad")
+    try:
+        bot = Bot(token=config.BOT_TOKEN)
+        db = SessionLocal()
+        users = db.query(User).filter_by(night_msg_enabled=True, is_active=True).all()
+        
+        logger.info(f"ارسال پیام شب به {len(users)} کاربر")
+        
+        for user in users:
+            try:
+                keyboard = [
+                    [
+                        InlineKeyboardButton("😊 خوب", callback_data="mood_good"),
+                        InlineKeyboardButton("😐 معمولی", callback_data="mood_normal"),
+                        InlineKeyboardButton("😔 بد", callback_data="mood_bad")
+                    ]
                 ]
-            ]
-            text = (
-                f"🌙 **شب بخیر {user.preferred_name}!**\n\n"
-                f"{get_night_message()}\n\n"
-                f"روزت چطور بود؟"
-            )
-            await bot.send_message(
-                chat_id=user.user_id,
-                text=text,
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        except Exception as e:
-            print(f"Error sending night to {user.user_id}: {e}")
-    db.close()
+                text = (
+                    f"🌙 **شب بخیر {user.preferred_name}!**\n\n"
+                    f"روزت چطور بود؟\n"
+                    f"با انتخاب یکی از گزینه‌ها، احساس امروزت رو ثبت کن."
+                )
+                await bot.send_message(
+                    chat_id=user.user_id,
+                    text=text,
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                logger.info(f"پیام شب به {user.user_id} ارسال شد")
+                
+            except Exception as e:
+                logger.error(f"خطا در ارسال به {user.user_id}: {e}")
+        
+        db.close()
+        logger.info("ارسال پیام شب تکمیل شد")
+        
+    except Exception as e:
+        logger.error(f"خطا در send_night_messages: {e}")
 
 async def check_absent_users():
     """بررسی کاربرانی که ۳ روز سر نزده‌اند"""
-    bot = Bot(token=config.BOT_TOKEN)
-    db = SessionLocal()
-    three_days_ago = datetime.now(pytz.timezone("Asia/Tehran")) - timedelta(days=3)
-    users = db.query(User).filter(
-        User.is_active == True,
-        User.last_activity < three_days_ago
-    ).all()
-    
-    for user in users:
-        try:
-            text = (
-                f"👋 **سلام {user.preferred_name}!**\n\n"
-                f"{get_absent_message()}\n\n"
-                f"هر وقت خواستی، برگرد که دلم برات تنگ شده. 💙"
-            )
-            await bot.send_message(chat_id=user.user_id, text=text)
-            # به‌روزرسانی last_activity برای جلوگیری از ارسال مجدد
-            user.last_activity = datetime.now(pytz.timezone("Asia/Tehran"))
-            db.commit()
-        except Exception as e:
-            print(f"Error sending absent to {user.user_id}: {e}")
-    db.close()
-
-async def send_reminder(user_id: int, title: str, reminder_id: int, bot_token: str):
-    """ارسال پیام یادآوری"""
-    bot = Bot(token=bot_token)
     try:
-        text = (
-            f"⏰ **یادآوری!**\n\n"
-            f"{title}\n\n"
-            f"زمانش رسیده است. 🕐"
-        )
-        await bot.send_message(chat_id=user_id, text=text)
-        
-        # غیرفعال کردن یادآوری
+        bot = Bot(token=config.BOT_TOKEN)
         db = SessionLocal()
-        reminder = db.query(Reminder).filter_by(id=reminder_id).first()
-        if reminder:
-            reminder.is_active = False
-            db.commit()
+        from datetime import timedelta
+        three_days_ago = datetime.now(pytz.timezone("Asia/Tehran")) - timedelta(days=3)
+        users = db.query(User).filter(User.last_activity < three_days_ago).all()
+        
+        logger.info(f"ارسال پیام غیبت به {len(users)} کاربر")
+        
+        for user in users:
+            try:
+                text = (
+                    f"👋 **سلام {user.preferred_name}!**\n\n"
+                    f"چند روزی نبودی، نگرانت شدم.\n"
+                    f"امیدوارم حالت خوب باشه. هر وقت خواستی برگرد، منتظرتم. 💙"
+                )
+                await bot.send_message(chat_id=user.user_id, text=text)
+                logger.info(f"پیام غیبت به {user.user_id} ارسال شد")
+            except Exception as e:
+                logger.error(f"خطا در ارسال به {user.user_id}: {e}")
+        
         db.close()
+        
     except Exception as e:
-        print(f"Error sending reminder to {user_id}: {e}")
-
-def add_reminder_job(user_id: int, title: str, reminder_id: int, remind_time, bot):
-    """افزودن یادآوری به scheduler"""
-    scheduler.add_job(
-        send_reminder,
-        DateTrigger(run_date=remind_time),
-        args=[user_id, title, reminder_id, config.BOT_TOKEN],
-        id=f"reminder_{reminder_id}"
-    )
+        logger.error(f"خطا در check_absent_users: {e}")
 
 def start_scheduler():
-    """استارت scheduler"""
-    scheduler.add_job(send_morning_messages, 'cron', hour=7, minute=0, id="morning_job")
-    scheduler.add_job(send_night_messages, 'cron', hour=23, minute=0, id="night_job")
-    scheduler.add_job(check_absent_users, 'cron', hour=10, minute=0, id="absent_job")
-    scheduler.start()
-    print("✅ Scheduler started successfully!")
+    """راه‌اندازی scheduler با تنظیمات دقیق"""
+    try:
+        scheduler.remove_all_jobs()
+        
+        scheduler.add_job(
+            send_morning_messages,
+            CronTrigger(hour=7, minute=0, timezone=pytz.timezone("Asia/Tehran")),
+            id="morning_job"
+        )
+        scheduler.add_job(
+            send_night_messages,
+            CronTrigger(hour=23, minute=0, timezone=pytz.timezone("Asia/Tehran")),
+            id="night_job"
+        )
+        scheduler.add_job(
+            check_absent_users,
+            CronTrigger(hour=10, minute=0, timezone=pytz.timezone("Asia/Tehran")),
+            id="absent_job"
+        )
+        
+        scheduler.start()
+        logger.info("✅ Scheduler با موفقیت راه‌اندازی شد!")
+        logger.info(f"Jobs: {[j.id for j in scheduler.get_jobs()]}")
+        
+    except Exception as e:
+        logger.error(f"❌ خطا در start_scheduler: {e}")
