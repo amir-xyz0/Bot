@@ -2,17 +2,14 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش منوی اصلی - هم برای callback و هم برای پیام معمولی"""
-    # تشخیص نوع درخواست
-    if update.callback_query:
-        query = update.callback_query
+    query = update.callback_query
+    if query:
         await query.answer()
-        # سعی می‌کنیم پیام قبلی رو ویرایش کنیم، اگر نشد پیام جدید می‌فرستیم
+        message = query.message
         try:
-            await query.message.delete()  # حذف پیام قبلی
-            message = await query.message.reply_text("⏳ در حال بارگذاری...")
+            await message.delete()
         except:
-            message = await query.message.reply_text("⏳ در حال بارگذاری...")
+            pass
     else:
         message = update.message
 
@@ -24,20 +21,17 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "📋 **منوی اصلی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:"
     
-    # اگر پیام قبلاً وجود داشته و قابل ویرایشه، ویرایشش کن، وگرنه جدید بفرست
-    try:
-        if update.callback_query:
-            await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
-    except:
-        # اگر ویرایش نشد (مثلاً پیام قبلی حذف شده)، پیام جدید بفرست
+    if query:
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
         await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    # تنظیم current_section
     context.user_data['current_section'] = 'chat'
+    print(f"📌 current_section تنظیم شد به: {context.user_data['current_section']}")
     try:
         await query.message.delete()
     except:
