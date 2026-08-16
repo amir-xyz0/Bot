@@ -36,9 +36,10 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📋 بازگشت به منو", callback_data="main_menu")]
     ]
     
-    # اگر از طریق CallbackQuery آمده باشد، پیام قبلی را حذف کن
+    # ✅ حذف + ارسال جدید (به‌جای ویرایش)
     if update.callback_query:
         query = update.callback_query
+        await query.answer()
         try:
             await query.message.delete()
         except:
