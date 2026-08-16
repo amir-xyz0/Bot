@@ -9,7 +9,6 @@ from app.models import User
 logger = logging.getLogger(__name__)
 
 async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش پیش‌بینی امروز بر اساس داده‌های کاربر"""
     user_id = update.effective_user.id
     
     if update.callback_query:
@@ -31,7 +30,6 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
     
-    # تحلیل داده‌های کاربر
     mood_history = user.mood_history or []
     
     if len(mood_history) < 3:
@@ -42,18 +40,13 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # تحلیل احساسات ۷ روز اخیر
     recent = mood_history[-7:]
     good_days = sum(1 for h in recent if h.get("mood") == "good")
     bad_days = sum(1 for h in recent if h.get("mood") == "bad")
-    normal_days = sum(1 for h in recent if h.get("mood") == "normal")
     
-    # محاسبه‌ی روند
     trend = "صعودی 📈" if good_days > bad_days else "نزولی 📉" if bad_days > good_days else "متغیر 🔄"
     
-    # تولید پیش‌بینی
     predictions = []
-    
     if good_days >= 4:
         predictions.append("✅ انرژی خوبی خواهید داشت.")
         predictions.append("🌟 امروز روز مناسبی برای شروع کارهای جدید است.")
@@ -64,7 +57,6 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
         predictions.append("🌿 روز متعادلی خواهید داشت.")
         predictions.append("📝 امروز برای برنامه‌ریزی روزهای آینده مناسب است.")
     
-    # اضافه کردن یک پیش‌بینی تصادفی
     extra_predictions = [
         "🤝 امروز با کسی آشنا می‌شوید که تأثیر مثبتی روی شما دارد.",
         "📚 امروز زمان خوبی برای خواندن یا یادگیری است.",
@@ -93,10 +85,11 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def predict_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پیش‌بینی فردا (ویژه‌ی دکمه)"""
     query = update.callback_query
     await query.answer()
-    
-    # فعلاً همان پیش‌بینی امروز را نمایش می‌دهیم
-    # در نسخه‌ی کامل، می‌توان بر اساس روز بعد پیش‌بینی کرد
+    # حذف پیام قبلی و نمایش دوباره
+    try:
+        await query.message.delete()
+    except:
+        pass
     await show_prediction(update, context)
