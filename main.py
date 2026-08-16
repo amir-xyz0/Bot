@@ -13,12 +13,16 @@ from telegram.ext import (
     ContextTypes
 )
 from app.config import config
-from app.handlers import start, profile, menu, chat, history, profile_edit
+from app.handlers import (
+    start, profile, menu, chat, history, profile_edit,
+    predictor, past_self, therapist
+)
 from app.database import Base, engine
 from app.scheduler import start_scheduler
 from datetime import datetime
 import pytz
 
+# تنظیم لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -29,6 +33,7 @@ logger = logging.getLogger(__name__)
 # Error Handler
 # ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """مدیریت خطاهای ثبت‌نشده"""
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
         try:
@@ -47,7 +52,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start.start))
 
 # ============================================================
-# 2. ثبت‌نام
+# 2. ثبت‌نام (پروفایل)
 # ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
@@ -63,11 +68,14 @@ conv_handler = ConversationHandler(
 app.add_handler(conv_handler)
 
 # ============================================================
-# 3. منو
+# 3. منوی اصلی (با دکمه‌های جدید)
 # ============================================================
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
+app.add_handler(CallbackQueryHandler(menu.predict_menu, pattern="predict_menu"))
+app.add_handler(CallbackQueryHandler(menu.past_self_menu, pattern="past_self_menu"))
+app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
@@ -91,17 +99,38 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CommandHandler("history", history.show_history))
 
 # ============================================================
-# 6. گفتگو (آخرین اولویت)
+# 6. پیش‌بینی‌کننده‌ی روز
+# ============================================================
+app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
+
+# ============================================================
+# 7. خود گذشته
+# ============================================================
+app.add_handler(CallbackQueryHandler(past_self.end_past_self, pattern="end_past_self"))
+
+# ============================================================
+# 8. درمانگر شناختی
+# ============================================================
+app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
+
+# ============================================================
+# 9. گفتگو با دستیار (MessageHandler عمومی - آخرین اولویت)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
 # ============================================================
-# Error Handler
+# 10. مکالمات تخصصی (بعد از چت عمومی)
+# ============================================================
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
+
+# ============================================================
+# ثبت Error Handler
 # ============================================================
 app.add_error_handler(error_handler)
 
 # ============================================================
-# وب سرور
+# وب سرور برای Render
 # ============================================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -119,12 +148,12 @@ def run_http_server():
 threading.Thread(target=run_http_server, daemon=True).start()
 
 # ============================================================
-# Scheduler
+# راه‌اندازی Scheduler (ارسال پیام‌های خودکار)
 # ============================================================
 start_scheduler()
 
 # ============================================================
-# اجرا
+# اجرای اصلی ربات
 # ============================================================
 if __name__ == "__main__":
     print("🚀 ربات دستیار هوشمند راه‌اندازی شد!")
