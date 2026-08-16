@@ -36,7 +36,8 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📋 بازگشت به منو", callback_data="main_menu")]
     ]
     
-    if query := update.callback_query:
+    if update.callback_query:
+        query = update.callback_query
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     else:
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
