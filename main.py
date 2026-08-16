@@ -100,7 +100,7 @@ def run_http_server():
 threading.Thread(target=run_http_server, daemon=True).start()
 
 # ============================================================
-# 8. Scheduler (ارسال خودکار پیام‌های سلامت ساعت ۷ صبح)
+# 8. Scheduler (ارسال خودکار پیام‌ها)
 # ============================================================
 start_scheduler()
 
