@@ -7,14 +7,15 @@ from datetime import datetime
 async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
+    # حذف پیام قبلی
     if update.callback_query:
         query = update.callback_query
         await query.answer()
-        message = query.message
         try:
-            await message.delete()
+            await query.message.delete()
         except:
             pass
+        message = await query.message.reply_text("⏳ در حال بارگذاری تاریخچه...")
     else:
         message = update.message
     
@@ -50,11 +51,11 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     analysis = ""
     if good_pct > 70:
-        analysis = "🌟 **روحیه‌ات عالیه!** ادامه بده. امروز هم کارهای خوبی که دوست داری رو انجام بده."
+        analysis = "🌟 **روحیه‌ات عالیه!** ادامه بده."
     elif good_pct > 50:
-        analysis = "🌿 **روحیه‌ات نسبتاً خوبه.** روزهای خوب و بد داری. سعی کن روزهای خوب رو بیشتر کنی."
+        analysis = "🌿 **روحیه‌ات نسبتاً خوبه.** روزهای خوب و بد داری."
     elif bad_pct > 60:
-        analysis = "💔 **این روزها سخت بوده.** تنها نیستی. یه پیاده‌روی برو، با یه دوست صحبت کن، یا به موسیقی گوش بده. به خودت سخت نگیر."
+        analysis = "💔 **این روزها سخت بوده.** تنها نیستی. یه پیاده‌روی برو، با یه دوست صحبت کن."
     else:
         analysis = "🌈 **احساساتت متعادله.** برای بهبود روحیه، هر روز به کارهای خوبی که انجام دادی فکر کن."
     
@@ -72,12 +73,22 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]
     ]
     
-    await message.reply_text(full_text, reply_markup=InlineKeyboardMarkup(keyboard))
+    # حذف پیام لودینگ
+    try:
+        await message.delete()
+    except:
+        pass
+    
+    await update.effective_message.reply_text(full_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await query.message.delete()
+    
+    try:
+        await query.message.delete()
+    except:
+        pass
     
     user_id = update.effective_user.id
     db = SessionLocal()
@@ -129,4 +140,4 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ احساس امروز ثبت شد!\n\n"
         f"حالت: {emoji}\n"
         f"شب بخیر و خواب آرام 🌙"
-    )
+        )
