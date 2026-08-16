@@ -7,7 +7,6 @@ from datetime import datetime
 async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # حذف پیام قبلی (اگر از callback آمده باشد)
     if update.callback_query:
         query = update.callback_query
         await query.answer()
@@ -16,7 +15,6 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
     
-    # ارسال پیام لودینگ
     loading_msg = await update.effective_message.reply_text("⏳ در حال بارگذاری تاریخچه...")
     
     db = SessionLocal()
@@ -75,9 +73,7 @@ async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]
     ]
     
-    # ✅ حذف پیام لودینگ قبل از ارسال پاسخ نهایی
     await loading_msg.delete()
-    
     await update.effective_message.reply_text(full_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -135,8 +131,13 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     
     emoji = "😊" if mood == "good" else "😐" if mood == "normal" else "😔"
+    
+    # ✅ اضافه شدن دکمه‌ی بازگشت به منو
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
+    
     await query.message.reply_text(
         f"✅ احساس امروز ثبت شد!\n\n"
         f"حالت: {emoji}\n"
-        f"شب بخیر و خواب آرام 🌙"
+        f"شب بخیر و خواب آرام 🌙",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
