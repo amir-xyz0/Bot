@@ -36,9 +36,14 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📋 بازگشت به منو", callback_data="main_menu")]
     ]
     
+    # اگر از طریق CallbackQuery آمده باشد، پیام قبلی را حذف کن
     if update.callback_query:
         query = update.callback_query
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        try:
+            await query.message.delete()
+        except:
+            pass
+        await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     else:
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -46,7 +51,11 @@ async def edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data['edit_type'] = 'name'
-    await query.edit_message_text("📝 نام جدید خود را وارد کنید:")
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("📝 نام جدید خود را وارد کنید:")
 
 async def edit_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -55,7 +64,11 @@ async def edit_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("👨 مرد", callback_data="set_gender_male")],
         [InlineKeyboardButton("👩 زن", callback_data="set_gender_female")]
     ]
-    await query.edit_message_text("👤 جنسیت جدید خود را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("👤 جنسیت جدید خود را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def set_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -68,14 +81,22 @@ async def set_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user.gender = gender
         db.commit()
     db.close()
-    await query.edit_message_text("✅ جنسیت با موفقیت تغییر کرد!")
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("✅ جنسیت با موفقیت تغییر کرد!")
     await show_profile(update, context)
 
 async def edit_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data['edit_type'] = 'age'
-    await query.edit_message_text("📅 سن جدید خود را وارد کنید (عدد):")
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("📅 سن جدید خود را وارد کنید (عدد):")
 
 async def edit_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -86,7 +107,11 @@ async def edit_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("😂 طنز", callback_data="set_style_funny")],
         [InlineKeyboardButton("🧘 آرام", callback_data="set_style_calm")]
     ]
-    await query.edit_message_text("🎭 لحن جدید خود را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("🎭 لحن جدید خود را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def set_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -99,7 +124,11 @@ async def set_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user.chat_style = style
         db.commit()
     db.close()
-    await query.edit_message_text("✅ لحن با موفقیت تغییر کرد!")
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("✅ لحن با موفقیت تغییر کرد!")
     await show_profile(update, context)
 
 async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -113,7 +142,11 @@ async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE)
         user.night_msg_enabled = not user.night_msg_enabled
         db.commit()
     db.close()
-    await query.edit_message_text("✅ تنظیمات اعلان با موفقیت تغییر کرد!")
+    try:
+        await query.message.delete()
+    except:
+        pass
+    await query.message.reply_text("✅ تنظیمات اعلان با موفقیت تغییر کرد!")
     await show_profile(update, context)
 
 async def handle_edit_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
