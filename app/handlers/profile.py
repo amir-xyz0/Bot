@@ -8,24 +8,20 @@ NAME, GENDER, AGE, STYLE = range(4)
 async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
         pass
-    # ارسال پیام جدید
     msg = await query.message.reply_text("📝 **لطفاً نام خود را وارد کنید:**")
     context.user_data['msg_id'] = msg.message_id
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["preferred_name"] = update.message.text
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
-    # حذف پیام قبلی ربات
     try:
         if 'msg_id' in context.user_data:
             await update.message.bot.delete_message(
@@ -50,7 +46,6 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data["gender"] = query.data
-    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
@@ -65,12 +60,10 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if age < 10 or age > 100:
             raise ValueError
         context.user_data["age"] = age
-        # حذف پیام کاربر
         try:
             await update.message.delete()
         except:
             pass
-        # حذف پیام قبلی ربات
         try:
             if 'msg_id' in context.user_data:
                 await update.message.bot.delete_message(
@@ -100,7 +93,6 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data["chat_style"] = query.data
-    # حذف پیام قبلی
     try:
         await query.message.delete()
     except:
@@ -118,7 +110,7 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.commit()
     db.close()
     
-    msg = await query.message.reply_text("✅ **ثبت‌نام با موفقیت انجام شد!**")
+    await query.message.reply_text("✅ **ثبت‌نام با موفقیت انجام شد!**")
     
     from app.handlers.menu import main_menu
     await main_menu(update, context)
