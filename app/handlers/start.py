@@ -16,21 +16,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await main_menu(update, context)
         return
     
-    # ⭐ صفحه خوش‌آمدگویی مثل عکس (قبل از استارت)
     text = (
-        "🤖 **دستیار هوشمند**\n"
-        "ربات\n\n"
-        "---\n\n"
-        "**این ربات چه می‌کند؟**\n\n"
-        "ربات دستیار هوشمند برای همراهی شما در زندگی روزمره\n\n"
-        "• گفتگو با دستیار هوشمند\n"
-        "• تنظیم یادآوری‌های روزانه\n"
-        "• ثبت و تحلیل احساسات\n"
-        "• مدیریت پروفایل شخصی\n\n"
-        "---\n\n"
-        "**شروع ربات**"
+        "🤖 **به دستیار هوشمند خود خوش آمدید**\n\n"
+        "من اینجا هستم تا به شما در مدیریت روزانه، "
+        "گفتگو و ثبت احساسات کمک کنم.\n\n"
+        "برای شروع، لطفاً ثبت‌نام را تکمیل کنید."
     )
-    keyboard = [[InlineKeyboardButton("🚀 شروع ربات", callback_data="start_profile")]]
+    keyboard = [[InlineKeyboardButton("🚀 شروع ثبت‌نام", callback_data="start_profile")]]
     await update.message.reply_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
