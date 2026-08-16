@@ -31,32 +31,87 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     await update.message.reply_text("⏳ در حال پردازش...")
     
-    # چک کردن کلید API
+    # ======================================================
+    #  اولویت اول: GapGPT
+    # ======================================================
+    if config.GAPGPT_API_KEY and config.GAPGPT_API_KEY != "":
+        try:
+            url = f"{config.GAPGPT_BASE_URL}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {config.GAPGPT_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": config.GAPGPT_MODEL,
+                "messages": [
+                    {"role": "system", "content": f"تو یک دستیار {user.chat_style} هستی. با لحن {user.chat_style} پاسخ بده."},
+                    {"role": "user", "content": user_message}
+                ],
+                "temperature": 0.9,
+                "max_tokens": 256
+            }
+            
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+            response_data = response.json()
+            
+            if response.status_code == 200:
+                reply = response_data.get("choices", [{}])[0].get("message", {}).get("content")
+                if reply:
+                    await update.message.reply_text(reply)
+                    return
+                else:
+                    await update.message.reply_text(
+                        f"⚠️ پاسخ خالی از GapGPT:\n```json\n{json.dumps(response_data, indent=2, ensure_ascii=False)[:500]}\n```"
+                    )
+                    # در صورت خالی بودن پاسخ، به سراغ RapidAPI می‌رویم
+            else:
+                error_msg = response_data.get("error", {}).get("message", "خطای ناشناخته")
+                await update.message.reply_text(
+                    f"❌ خطای GapGPT ({response.status_code}):\n{error_msg}\n\nتلاش با RapidAPI..."
+                )
+                # ادامه به سراغ RapidAPI
+                
+        except Exception as e:
+            await update.message.reply_text(
+                f"⚠️ خطا در GapGPT: {str(e)}\n\nتلاش با RapidAPI..."
+            )
+            # ادامه به سراغ RapidAPI
+    else:
+        await update.message.reply_text("⏳ کلید GapGPT تنظیم نشده، تلاش با RapidAPI...")
+    
+    # ======================================================
+    #  اولویت دوم: RapidAPI Vision (با همان کلید قبلی)
+    # ======================================================
     if not config.RAPIDAPI_KEY or config.RAPIDAPI_KEY == "":
         await update.message.reply_text(
-            "⚠️ کلید API تنظیم نشده است.\n"
-            "لطفاً متغیر `RAPIDAPI_KEY` را در Render تنظیم کنید."
+            "❌ هیچ کلید API فعالی تنظیم نشده است!\n"
+            "لطفاً `GAPGPT_API_KEY` یا `RAPIDAPI_KEY` را در Render تنظیم کنید."
         )
         return
     
-    payload = {
-        "messages": [{"role": "user", "content": user_message}],
-        "system_prompt": f"تو یک دستیار {user.chat_style} هستی. با لحن {user.chat_style} پاسخ بده.",
-        "temperature": 0.9,
-        "top_k": 5,
-        "top_p": 0.9,
-        "max_tokens": 256,
-        "web_access": False
-    }
-    
-    headers = {
-        "x-rapidapi-key": config.RAPIDAPI_KEY,
-        "x-rapidapi-host": config.RAPIDAPI_HOST,
-        "Content-Type": "application/json"
-    }
-    
     try:
-        # ارسال درخواست
+        # ساخت payload مطابق با API Vision
+        payload = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": user_message
+                        }
+                    ]
+                }
+            ],
+            "web_access": False
+        }
+        
+        headers = {
+            "x-rapidapi-key": config.RAPIDAPI_KEY,
+            "x-rapidapi-host": config.RAPIDAPI_HOST,
+            "Content-Type": "application/json"
+        }
+        
         response = requests.post(
             config.CHAT_API_URL,
             json=payload,
@@ -64,38 +119,32 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
             timeout=30
         )
         
-        # دریافت پاسخ
         response_data = response.json()
         
-        # بررسی وضعیت
-        if response.status_code != 200:
-            error_msg = response_data.get("message", "خطای ناشناخته")
-            await update.message.reply_text(
-                f"❌ خطای سرور ({response.status_code}):\n{error_msg}"
-            )
-            return
-        
-        # استخراج پاسخ
-        reply = None
-        if "choices" in response_data and len(response_data["choices"]) > 0:
-            reply = response_data["choices"][0].get("message", {}).get("content")
-        elif "response" in response_data:
-            reply = response_data["response"]
-        elif "result" in response_data:
-            reply = response_data["result"]
-        elif "text" in response_data:
-            reply = response_data["text"]
-        elif "data" in response_data:
-            data = response_data["data"]
-            if isinstance(data, dict) and "text" in data:
-                reply = data["text"]
-        
-        if reply:
-            await update.message.reply_text(reply)
+        if response.status_code == 200:
+            # استخراج پاسخ از ساختارهای مختلف
+            reply = None
+            if "choices" in response_data and len(response_data["choices"]) > 0:
+                reply = response_data["choices"][0].get("message", {}).get("content")
+            elif "response" in response_data:
+                reply = response_data["response"]
+            elif "result" in response_data:
+                reply = response_data["result"]
+            elif "text" in response_data:
+                reply = response_data["text"]
+            elif "data" in response_data and isinstance(response_data["data"], dict):
+                reply = response_data["data"].get("text") or response_data["data"].get("response")
+            
+            if reply:
+                await update.message.reply_text(reply)
+            else:
+                await update.message.reply_text(
+                    f"⚠️ پاسخ غیرمنتظره از RapidAPI:\n```json\n{json.dumps(response_data, indent=2, ensure_ascii=False)[:1000]}\n```"
+                )
         else:
-            # نمایش پاسخ خام برای دیباگ
+            error_msg = response_data.get("message", response_data.get("error", "خطای ناشناخته"))
             await update.message.reply_text(
-                f"⚠️ پاسخ غیرمنتظره:\n```json\n{json.dumps(response_data, indent=2, ensure_ascii=False)}\n```"
+                f"❌ خطای RapidAPI ({response.status_code}):\n{error_msg}"
             )
             
     except requests.exceptions.Timeout:
