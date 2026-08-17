@@ -1,6 +1,7 @@
 import logging
 import traceback
-import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -35,12 +36,12 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         except:
             pass
 
-# ===== ساخت اپلیکیشن =====
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ===== هندلرها =====
+# ===== 1. استارت =====
 app.add_handler(CommandHandler("start", start.start))
 
+# ===== 2. ثبت‌نام =====
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -54,6 +55,7 @@ conv_handler = ConversationHandler(
 )
 app.add_handler(conv_handler)
 
+# ===== 3. منو =====
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
@@ -63,6 +65,7 @@ app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
+# ===== 4. ویرایش پروفایل =====
 app.add_handler(CallbackQueryHandler(profile_edit.edit_name, pattern="edit_name"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_gender, pattern="edit_gender"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_gender, pattern="set_gender_"))
@@ -72,13 +75,15 @@ app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
+# ===== 5. تاریخچه احساسات =====
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 app.add_handler(CommandHandler("history", history.show_history))
 
+# ===== 6. پیش‌بینی =====
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
-# ===== خود گذشته =====
+# ===== 7. خود گذشته =====
 app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
 app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
 app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
@@ -86,29 +91,39 @@ app.add_handler(CallbackQueryHandler(past_self.new_interview, pattern="past_self
 app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="past_self_end_interview"))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 
-# ===== درمانگر =====
+# ===== 8. درمانگر =====
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
-# ===== مکالمات تخصصی =====
+# ===== 9. مکالمات تخصصی =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
-# ===== گفتگو با دستیار (آخرین اولویت) =====
+# ===== 10. گفتگو با دستیار (آخرین اولویت) =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
 app.add_error_handler(error_handler)
 
+# ===== وب سرور برای جلوگیری از خوابیدن =====
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
+def run_http_server():
+    server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
+    server.serve_forever()
+
+threading.Thread(target=run_http_server, daemon=True).start()
+
 # ===== Scheduler =====
 start_scheduler()
 
-# ===== اجرا با Webhook (برای رفع Conflict) =====
+# ===== اجرا با Polling =====
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    print("🚀 ربات با Webhook راه‌اندازی شد!")
+    print("🚀 ربات با Polling راه‌اندازی شد!")
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=config.BOT_TOKEN,
-        webhook_url=f"https://life-assistant-bot.onrender.com/{config.BOT_TOKEN}"
-)
+    app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
