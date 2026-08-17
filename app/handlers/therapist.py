@@ -9,21 +9,18 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
-# سوالات استاندارد CBT
 THERAPY_QUESTIONS = {
     "start": "سلام! من اینجام تا بهت کمک کنم افکارت رو بهتر بشناسی.\n\nامروز چه احساسی داری؟ می‌تونی با یک کلمه یا یک جمله توصیفش کنی.",
     "identify": "چه فکری باعث این احساس شده؟",
     "challenge": "چه مدرکی داری که این فکر درسته؟ آیا ممکنه راه‌های دیگه‌ای هم برای نگاه به این موضوع وجود داشته باشه؟",
     "reframe": "حالا بیا یه فکر جایگزین و منطقی‌تر پیدا کنیم. چه فکری می‌تونه آرام‌ت کنه؟",
-    "action": "امروز چیکار می‌تونی بکنی که این فکر رو کمتر کنی؟",
+    "action": "امروز چیکار می‌تونی بکنی که این فکر رو کمتر کنی؟"
 }
 
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """شروع جلسه‌ی درمانگری"""
     user_id = update.effective_user.id
-    
-    if update.callback_query:
-        query = update.callback_query
+    query = update.callback_query
+    if query:
         await query.answer()
         message = query.message
         try:
@@ -41,6 +38,8 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
     
+    # ✅ تنظیم current_section برای جلوگیری از پیام خطای چت عمومی
+    context.user_data['current_section'] = 'therapy'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
     
@@ -51,7 +50,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش مکالمه با درمانگر"""
     user_id = update.effective_user.id
     user_message = update.message.text
     
@@ -68,25 +66,25 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     step = context.user_data.get('therapy_step', 'start')
     
-    # ساخت پرامپت برای OpenRouter
-    prompt = f"""تو یک درمانگر شناختی (CBT) هستی. با کاربری گفتگو می‌کنی که به دنبال کمک برای مدیریت افکار و احساساتش است.
+    prompt = f"""تو یک درمانگر شناختی (CBT) هستی که با کاربری همدلانه و حرفه‌ای گفتگو می‌کند.
 
-مرحله‌ی فعلی: {step}
-سوال استاندارد برای این مرحله: {THERAPY_QUESTIONS.get(step, '')}
+مرحله‌ی فعلی جلسه: {step}
+سوال استاندارد این مرحله: {THERAPY_QUESTIONS.get(step, '')}
 
 اطلاعات کاربر:
 - نام: {user.preferred_name}
 - سن: {user.age}
-- سبک لحن: {user.chat_style}
+- لحن موردعلاقه: {user.chat_style}
 
 پیام کاربر: {user_message}
 
 وظیفه‌ات:
-1. پاسخ را با همدلی و گرمی بده.
-2. در پایان، سوال بعدی را بپرس (طبق مرحله‌ی بعد).
-3. اگر کاربر پاسخش کامل بود، به مرحله‌ی بعد برو.
+۱. با همدلی، گرمی و احترام پاسخ بده.
+۲. پاسخ باید کاملاً شبیه به یک درمانگر واقعی باشد (نه رباتی).
+۳. در پایان پاسخ، سوال بعدی را طبق مرحله‌ی بعد بپرس.
+۴. اگر کاربر پاسخش کامل بود، به مرحله‌ی بعد برو.
 
-پاسخ خود را به‌عنوان یک درمانگر بنویس:
+پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون توضیحات اضافی):
 """
 
     try:
@@ -98,8 +96,8 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
         payload = {
             "model": config.OPENROUTER_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.8,
-            "max_tokens": 350
+            "temperature": 0.7,
+            "max_tokens": 400
         }
         
         response = requests.post(url, json=payload, headers=headers, timeout=30)
@@ -123,7 +121,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error(f"خطا در therapist: {e}")
     
-    # پاسخ پیش‌فرض
     await update.message.reply_text(
         "🧠 **درمانگر:**\n\n"
         "متأسفم، الان کمی گیج شدم. بیا از اول شروع کنیم.\n"
@@ -131,7 +128,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پایان جلسه‌ی درمانگری"""
     query = update.callback_query
     await query.answer()
     context.user_data['therapy_mode'] = False
@@ -147,4 +143,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ **جلسه‌ی درمانگری به پایان رسید.**\n\n"
         "امیدوارم امروز کمی بهتر شده باشید. هر وقت نیاز داشتید، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-  )
+    )
