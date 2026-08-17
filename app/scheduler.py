@@ -5,6 +5,7 @@ from app.config import config
 from app.database import SessionLocal
 from app.models import User
 from app.data.health_messages import HEALTH_MESSAGES
+from app.messages import get_morning_message, get_night_message, get_absent_message
 from datetime import datetime, timedelta
 import pytz
 import logging
@@ -14,15 +15,17 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Tehran"))
 
 async def send_morning_messages():
+    """ارسال پیام صبح بخیر + انگیزشی (دو پیام جداگانه)"""
     try:
         bot = Bot(token=config.BOT_TOKEN)
         db = SessionLocal()
-        users = db.query(User).filter_by(health_msg_enabled=True, is_active=True).all()
+        users = db.query(User).filter_by(morning_msg_enabled=True, is_active=True).all()
         
         logger.info(f"ارسال پیام صبح به {len(users)} کاربر")
         
         for user in users:
             try:
+                # ۱. پیام سلامتی
                 sent = user.sent_health_messages or []
                 if sent:
                     last_day = max([m.get("day", 0) for m in sent])
@@ -30,26 +33,45 @@ async def send_morning_messages():
                 else:
                     next_day = 1
                 
-                message_data = HEALTH_MESSAGES[next_day - 1]
+                health_data = HEALTH_MESSAGES[next_day - 1]
                 
-                text = (
+                health_text = (
                     f"🌅 **صبح بخیر {user.preferred_name}!**\n\n"
                     f"📌 **روز {next_day} از ۳۰**\n"
-                    f"**{message_data['title']}**\n\n"
-                    f"{message_data['message']}\n\n"
+                    f"**{health_data['title']}**\n\n"
+                    f"{health_data['message']}\n\n"
                     f"💪 برای سلامتی‌ات ارزش قائل شو!"
                 )
-                await bot.send_message(chat_id=user.user_id, text=text)
                 
+                # ارسال پیام سلامتی با دکمه بازگشت به منو
+                keyboard = [[InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]]
+                await bot.send_message(
+                    chat_id=user.user_id,
+                    text=health_text,
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                
+                # ذخیره تاریخچه
                 sent.append({
                     "date": datetime.now().isoformat(),
                     "day": next_day,
-                    "title": message_data['title'],
-                    "message": message_data['message']
+                    "title": health_data['title'],
+                    "message": health_data['message']
                 })
                 user.sent_health_messages = sent
                 db.commit()
-                logger.info(f"پیام صبح به {user.user_id} ارسال شد")
+                
+                # ۲. پیام انگیزشی (جداگانه)
+                motivational_text = get_morning_message(user.gender)
+                motivational_text = f"✨ **یادآوری امروز:**\n\n{motivational_text}"
+                
+                # پیام انگیزشی بدون دکمه (برای زیبایی)
+                await bot.send_message(
+                    chat_id=user.user_id,
+                    text=motivational_text
+                )
+                
+                logger.info(f"پیام‌های صبح به {user.user_id} ارسال شد")
                 
             except Exception as e:
                 logger.error(f"خطا در ارسال به {user.user_id}: {e}")
@@ -61,6 +83,7 @@ async def send_morning_messages():
         logger.error(f"خطا در send_morning_messages: {e}")
 
 async def send_night_messages():
+    """ارسال پیام شب بخیر + پرسش احساسات با دکمه بازگشت به منو"""
     try:
         bot = Bot(token=config.BOT_TOKEN)
         db = SessionLocal()
@@ -75,12 +98,13 @@ async def send_night_messages():
                         InlineKeyboardButton("😊 خوب", callback_data="mood_good"),
                         InlineKeyboardButton("😐 معمولی", callback_data="mood_normal"),
                         InlineKeyboardButton("😔 بد", callback_data="mood_bad")
-                    ]
+                    ],
+                    [InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]
                 ]
                 text = (
                     f"🌙 **شب بخیر {user.preferred_name}!**\n\n"
-                    f"روزت چطور بود؟\n"
-                    f"با انتخاب یکی از گزینه‌ها، احساس امروزت رو ثبت کن."
+                    f"{get_night_message()}\n\n"
+                    f"روزت چطور بود؟"
                 )
                 await bot.send_message(
                     chat_id=user.user_id,
@@ -111,10 +135,15 @@ async def check_absent_users():
             try:
                 text = (
                     f"👋 **سلام {user.preferred_name}!**\n\n"
-                    f"چند روزی نبودی، نگرانت شدم.\n"
-                    f"امیدوارم حالت خوب باشه. هر وقت خواستی برگرد، منتظرتم. 💙"
+                    f"{get_absent_message()}\n\n"
+                    f"هر وقت خواستی برگرد، منتظرتم. 💙"
                 )
-                await bot.send_message(chat_id=user.user_id, text=text)
+                keyboard = [[InlineKeyboardButton("🔙 منوی اصلی", callback_data="main_menu")]]
+                await bot.send_message(
+                    chat_id=user.user_id,
+                    text=text,
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
                 logger.info(f"پیام غیبت به {user.user_id} ارسال شد")
             except Exception as e:
                 logger.error(f"خطا در ارسال به {user.user_id}: {e}")
