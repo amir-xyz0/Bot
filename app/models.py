@@ -10,6 +10,7 @@ class User(Base):
     age = Column(Integer)
     chat_style = Column(String(50), default="friendly")
     mood_history = Column(JSON, default=list)
+    personality_profile = Column(JSON, default=None)  # جدید: برای خود گذشته
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_activity = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     is_active = Column(Boolean, default=True)
