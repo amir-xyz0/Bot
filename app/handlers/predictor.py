@@ -8,6 +8,31 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
+# کتابخانه پاسخ‌های از پیش‌نویس‌شده (برای تنوع)
+PREDICTIONS_GOOD = [
+    "🌟 امروز روز خوبی برای شروع یک کار جدید است.",
+    "💪 انرژی بالایی خواهی داشت، از آن استفاده کن.",
+    "😊 لبخند را فراموش نکن، امروز روزت را می‌سازد.",
+    "📈 امروز یک پیشرفت کوچک اما مهم خواهی داشت.",
+    "🎯 بر روی اهداف اصلی خود تمرکز کن، امروز زمان مناسبی است."
+]
+
+PREDICTIONS_BAD = [
+    "🌧️ امروز ممکن است احساس خستگی کنی، به خودت استراحت بده.",
+    "🛑 اگر کاری امروز پیش نرفت، به خودت سخت نگیر.",
+    "🧘 یک نفس عمیق بکش و به خودت وقت بده.",
+    "📝 شاید امروز بهتر باشد برنامه‌های سبک‌تری داشته باشی.",
+    "💆 امروز زمان مناسبی برای مراقبت از خودت است."
+]
+
+PREDICTIONS_NEUTRAL = [
+    "🌿 روز متعادلی خواهی داشت، از لحظات ساده لذت ببر.",
+    "📚 امروز زمان خوبی برای مطالعه یا یادگیری است.",
+    "🤝 ممکن است امروز با کسی آشنا شوی که تأثیر مثبتی دارد.",
+    "🎨 خلاقیتت امروز در سطح بالایی است.",
+    "🌅 از یک منظره یا لحظه‌ی ساده امروز لذت ببر."
+]
+
 async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
@@ -35,45 +60,53 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(mood_history) < 3:
         await message.reply_text(
             "📊 **داده‌ی کافی برای پیش‌بینی وجود ندارد.**\n\n"
-            "لطفاً حداقل ۳ روز احساسات خود را ثبت کنید تا بتوانم الگوهای شما را شناسایی کنم.\n\n"
-            "هر شب ساعت ۲۳ از شما می‌پرسم روزتان چطور بوده."
+            "لطفاً حداقل ۳ روز احساسات خود را ثبت کنید."
         )
         return
     
-    recent = mood_history[-7:]
+    # تحلیل دقیق‌تر با امتیازدهی
+    recent = mood_history[-10:]  # ۱۰ روز اخیر
     good_days = sum(1 for h in recent if h.get("mood") == "good")
     bad_days = sum(1 for h in recent if h.get("mood") == "bad")
+    normal_days = len(recent) - good_days - bad_days
     
-    trend = "صعودی 📈" if good_days > bad_days else "نزولی 📉" if bad_days > good_days else "متغیر 🔄"
+    # محاسبه امتیاز (وزنی)
+    score = good_days * 1 - bad_days * 1.5 + normal_days * 0.5
     
-    predictions = []
-    if good_days >= 4:
-        predictions.append("✅ انرژی خوبی خواهید داشت.")
-        predictions.append("🌟 امروز روز مناسبی برای شروع کارهای جدید است.")
-    elif bad_days >= 4:
-        predictions.append("⚠️ ممکن است امروز احساس خستگی کنید.")
-        predictions.append("💆 به خودتان استراحت بدهید.")
+    # تعیین وضعیت کلی
+    if score > 3:
+        state = "good"
+        base_predictions = PREDICTIONS_GOOD.copy()
+        trend = "صعودی 📈"
+    elif score < -2:
+        state = "bad"
+        base_predictions = PREDICTIONS_BAD.copy()
+        trend = "نزولی 📉"
     else:
-        predictions.append("🌿 روز متعادلی خواهید داشت.")
-        predictions.append("📝 امروز برای برنامه‌ریزی روزهای آینده مناسب است.")
+        state = "neutral"
+        base_predictions = PREDICTIONS_NEUTRAL.copy()
+        trend = "متغیر 🔄"
     
-    extra_predictions = [
-        "🤝 امروز با کسی آشنا می‌شوید که تأثیر مثبتی روی شما دارد.",
-        "📚 امروز زمان خوبی برای خواندن یا یادگیری است.",
-        "🎨 خلاقیت شما امروز در بالاترین سطح است.",
-        "💪 امروز می‌توانید بر یک چالش قدیمی غلبه کنید.",
-        "🌅 امروز از یک منظره یا لحظه‌ی ساده لذت خواهید برد."
-    ]
-    predictions.append(random.choice(extra_predictions))
+    # انتخاب ۲ تا ۳ پیش‌بینی تصادفی
+    random.shuffle(base_predictions)
+    selected = base_predictions[:2]
+    
+    # اضافه کردن یک پیش‌بینی شخصی‌سازی‌شده
+    if state == "good":
+        extra = "🌟 امروز بهترین نسخه‌ی خودت باش!"
+    elif state == "bad":
+        extra = "💪 قوی باش، این روزها هم می‌گذرند."
+    else:
+        extra = "🌱 هر روز یک فرصت جدید است."
     
     text = (
         f"🔮 **پیش‌بینی امروز**\n\n"
         f"📊 روند احساسات: {trend}\n"
-        f"📅 روزهای خوب: {good_days} از ۷ روز\n\n"
+        f"📅 روزهای خوب: {good_days} از {len(recent)} روز\n\n"
         f"**پیش‌بینی‌ها:**\n"
-        f"• {predictions[0]}\n"
-        f"• {predictions[1]}\n"
-        f"• {predictions[2] if len(predictions) > 2 else '🌟 روز خوبی در پیش دارید!'}\n\n"
+        f"• {selected[0]}\n"
+        f"• {selected[1] if len(selected) > 1 else ''}\n"
+        f"• {extra}\n\n"
         f"💡 این پیش‌بینی بر اساس {len(recent)} روز اخیر شماست."
     )
     
@@ -87,7 +120,6 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def predict_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    # حذف پیام قبلی و نمایش دوباره
     try:
         await query.message.delete()
     except:
