@@ -51,7 +51,7 @@ conv_handler = ConversationHandler(
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
     fallbacks=[CommandHandler("start", start.start)],
-    per_message=False
+    per_message=True  # ✅ تغییر داده شد تا هشدار برطرف شود
 )
 app.add_handler(conv_handler)
 
@@ -83,12 +83,19 @@ app.add_handler(CommandHandler("history", history.show_history))
 # ===== 6. پیش‌بینی =====
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
-# ===== 7. خود گذشته (پرسشنامه و گفتگو) =====
-app.add_handler(CallbackQueryHandler(past_self.use_existing_profile, pattern="past_self_use_existing"))
-app.add_handler(CallbackQueryHandler(past_self.new_profile, pattern="past_self_new_profile"))
-app.add_handler(CallbackQueryHandler(past_self.start_chat_with_past_self, pattern="past_self_start_chat"))
-app.add_handler(CallbackQueryHandler(past_self.handle_answer, pattern="past_self_ans_"))
-app.add_handler(CallbackQueryHandler(past_self.end_past_self, pattern="end_past_self"))
+# ===== 7. خود گذشته (نسخه جدید) =====
+# ورود به بخش
+app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
+# نمایش پاسخ‌ها
+app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
+# پاک کردن پاسخ‌ها
+app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
+# شروع مصاحبه جدید
+app.add_handler(CallbackQueryHandler(past_self.new_interview, pattern="past_self_new_interview"))
+# پایان زودهنگام مصاحبه
+app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="past_self_end_interview"))
+# دریافت پاسخ کاربر (MessageHandler جداگانه)
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 
 # ===== 8. درمانگر شناختی =====
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
