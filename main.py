@@ -39,7 +39,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 # ===== 1. استارت =====
 app.add_handler(CommandHandler("start", start.start))
 
-# ===== 2. ثبت‌نام =====
+# ===== 2. ثبت‌نام (با per_message=False) =====
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -48,8 +48,11 @@ conv_handler = ConversationHandler(
         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
-    fallbacks=[CommandHandler("start", start.start)],
-    per_message=True
+    fallbacks=[
+        CommandHandler("start", start.start),
+        CommandHandler("cancel", start.start)
+    ],
+    per_message=False  # ✅ تغییر کلیدی
 )
 app.add_handler(conv_handler)
 
@@ -102,7 +105,7 @@ start_scheduler()
 
 # ===== اجرا =====
 if __name__ == "__main__":
-    # حذف Webhook برای اطمینان
+    # حذف Webhook
     try:
         requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
         logger.info("✅ Webhook deleted")
