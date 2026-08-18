@@ -1,8 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-import logging
-
-logger = logging.getLogger(__name__)
 
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -45,9 +42,7 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
     await query.message.reply_text(
-        "💬 **بخش گفتگو با دستیار**\n\n"
-        "هر سوالی دارید، بپرسید. من اینجام تا کمکت کنم.\n"
-        "برای بازگشت به منو، دکمه زیر را بزنید.",
+        "💬 **بخش گفتگو با دستیار**\n\nهر سوالی دارید، بپرسید.",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ])
