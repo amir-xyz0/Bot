@@ -2,6 +2,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from app.database import SessionLocal
 from app.models import User
+import logging
+
+logger = logging.getLogger(__name__)
 
 NAME, GENDER, AGE, STYLE = range(4)
 
@@ -17,6 +20,8 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"🔥 get_name اجرا شد! نام: {update.message.text}")
+    
     context.user_data["preferred_name"] = update.message.text
     try:
         await update.message.delete()
