@@ -1,14 +1,15 @@
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from app.database import SessionLocal
 from app.models import User
-import logging
 
 logger = logging.getLogger(__name__)
 
 NAME, GENDER, AGE, STYLE = range(4)
 
 async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 start_profile اجرا شد")
     query = update.callback_query
     await query.answer()
     try:
@@ -21,12 +22,15 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"🔥 get_name اجرا شد! نام: {update.message.text}")
-    
     context.user_data["preferred_name"] = update.message.text
+    
+    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
+    
+    # حذف پیام ربات
     try:
         bot_msg_id = context.user_data.get('bot_msg_id')
         if bot_msg_id:
@@ -49,6 +53,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return GENDER
 
 async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"🔥 get_gender اجرا شد! جنسیت: {query.data}")
     query = update.callback_query
     await query.answer()
     context.user_data["gender"] = query.data
@@ -61,6 +66,7 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return AGE
 
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"🔥 get_age اجرا شد! سن: {update.message.text}")
     try:
         age = int(update.message.text)
         if age < 10 or age > 100:
@@ -97,6 +103,7 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return AGE
 
 async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"🔥 get_style اجرا شد! لحن: {query.data}")
     query = update.callback_query
     await query.answer()
     context.user_data["chat_style"] = query.data
@@ -116,6 +123,7 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.add(user)
     db.commit()
     db.close()
+    logger.info(f"✅ کاربر {user.preferred_name} ذخیره شد!")
     
     await query.message.reply_text("✅ **ثبت‌نام با موفقیت انجام شد!**")
     
