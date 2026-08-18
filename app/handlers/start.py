@@ -1,10 +1,15 @@
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
 
+logger = logging.getLogger(__name__)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    logger.info(f"🔥 start اجرا شد برای user_id: {user_id}")
+    
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
