@@ -1,11 +1,9 @@
 import logging
-import json
-import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from app.config import config
 from app.database import SessionLocal
 from app.models import User
+from app.openrouter_helper import call_openrouter
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +53,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
 
 # ============================================================
-# ۲. پردازش مکالمه با درمانگر
+# ۲. پردازش مکالمه با درمانگر (با تابع کمکی)
 # ============================================================
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -97,45 +95,21 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     db.close()
 
-    try:
-        url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": config.OPENROUTER_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "max_tokens": 400
-        }
+    result = call_openrouter(prompt, temperature=0.7, max_tokens=400)
+    
+    if result["success"]:
+        steps = ['start', 'identify', 'challenge', 'reframe', 'action']
+        current_idx = steps.index(step) if step in steps else 0
+        if current_idx < len(steps) - 1:
+            context.user_data['therapy_step'] = steps[current_idx + 1]
 
-        logger.info(f"📤 ارسال به OpenRouter (therapist)")
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        response_data = response.json()
-        logger.info(f"📥 وضعیت OpenRouter (therapist): {response.status_code}")
-
-        if response.status_code == 200:
-            reply = response_data.get("choices", [{}])[0].get("message", {}).get("content")
-            if reply:
-                steps = ['start', 'identify', 'challenge', 'reframe', 'action']
-                current_idx = steps.index(step) if step in steps else 0
-                if current_idx < len(steps) - 1:
-                    context.user_data['therapy_step'] = steps[current_idx + 1]
-
-                keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
-                await update.message.reply_text(
-                    f"🧠 **درمانگر:**\n\n{reply}",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-                return
-        else:
-            error_msg = response_data.get("error", {}).get("message", "خطای ناشناخته")
-            logger.error(f"❌ خطای OpenRouter (therapist): {error_msg}")
-            await update.message.reply_text(f"❌ خطا: {error_msg}")
-    except Exception as e:
-        logger.error(f"❌ خطا در therapist: {e}")
-        await update.message.reply_text("🧠 **درمانگر:**\n\nمتأسفم، الان کمی گیج شدم. بیا از اول شروع کنیم.")
+        keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
+        await update.message.reply_text(
+            f"🧠 **درمانگر:**\n\n{result['reply']}",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        await update.message.reply_text(f"🧠 **درمانگر:**\n\nمتأسفم، الان کمی گیج شدم. (خطا: {result['error']})")
 
 # ============================================================
 # ۳. پایان جلسه درمانگری
@@ -155,4 +129,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(
         "✅ **جلسه‌ی درمانگری به پایان رسید.**\n\nامیدوارم امروز کمی بهتر شده باشید.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    )
