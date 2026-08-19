@@ -14,7 +14,6 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_id = update.effective_user.id
     
-    # ✅ ایجاد Session جدید برای هر درخواست
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
@@ -29,10 +28,6 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
     
-    # ✅ دسترسی به attributes بعد از بسته شدن سشن مشکلی ندارد چون expire_on_commit=False است
-    user_name = user.preferred_name
-    user_style = user.chat_style
-    
     if context.user_data.get('current_section') != 'chat':
         await update.message.reply_text("💡 لطفاً از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
         return
@@ -44,21 +39,27 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
         headers = {
             "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://t.me/your_bot",  # اختیاری
+            "X-Title": "Life Assistant Bot"
         }
         payload = {
             "model": config.OPENROUTER_MODEL,
             "messages": [
-                {"role": "system", "content": f"تو یک دستیار {user_style} هستی. با لحن {user_style} پاسخ بده."},
+                {"role": "system", "content": f"تو یک دستیار {user.chat_style} هستی. با لحن {user.chat_style} پاسخ بده."},
                 {"role": "user", "content": user_message}
             ],
             "temperature": 0.9,
             "max_tokens": 256
         }
         
+        logger.info(f"📤 ارسال به OpenRouter: {json.dumps(payload, ensure_ascii=False)[:200]}...")
+        
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         response_data = response.json()
+        
         logger.info(f"📥 وضعیت OpenRouter: {response.status_code}")
+        logger.info(f"📄 پاسخ OpenRouter: {json.dumps(response_data, ensure_ascii=False)[:500]}...")
         
         if response.status_code == 200:
             reply = response_data.get("choices", [{}])[0].get("message", {}).get("content")
@@ -66,14 +67,27 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await loading_msg.delete()
                 await update.message.reply_text(reply)
                 return
+            else:
+                error_msg = "پاسخ خالی از OpenRouter"
+                logger.warning(f"⚠️ {error_msg}")
+                await loading_msg.delete()
+                await update.message.reply_text(f"⚠️ {error_msg}")
         else:
             error_msg = response_data.get("error", {}).get("message", "خطای ناشناخته")
+            logger.error(f"❌ خطای OpenRouter: {error_msg}")
             await loading_msg.delete()
             await update.message.reply_text(f"❌ خطا: {error_msg}")
             
     except requests.exceptions.Timeout:
         await loading_msg.delete()
         await update.message.reply_text("⏰ زمان پاسخ‌دهی طولانی شد. لطفاً دوباره تلاش کنید.")
+    except requests.exceptions.ConnectionError:
+        await loading_msg.delete()
+        await update.message.reply_text("🔌 اتصال به سرور برقرار نشد. لطفاً بعداً تلاش کنید.")
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ خطا در پردازش JSON: {e}")
+        await loading_msg.delete()
+        await update.message.reply_text("⚠️ پاسخ سرور معتبر نیست.")
     except Exception as e:
         logger.error(f"❌ خطا: {str(e)}")
         await loading_msg.delete()
