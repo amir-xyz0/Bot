@@ -22,6 +22,7 @@ from datetime import datetime
 import pytz
 import requests
 
+# تنظیم لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -39,10 +40,14 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 # ===== ساخت اپلیکیشن =====
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ===== 1. استارت =====
+# ============================================================
+# 1. استارت
+# ============================================================
 app.add_handler(CommandHandler("start", start.start))
 
-# ===== 2. ثبت‌نام =====
+# ============================================================
+# 2. ثبت‌نام (پروفایل)
+# ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -59,7 +64,9 @@ conv_handler = ConversationHandler(
 )
 app.add_handler(conv_handler)
 
-# ===== 3. منوی اصلی =====
+# ============================================================
+# 3. منوی اصلی
+# ============================================================
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
@@ -69,7 +76,9 @@ app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
-# ===== 4. ویرایش پروفایل =====
+# ============================================================
+# 4. ویرایش پروفایل
+# ============================================================
 app.add_handler(CallbackQueryHandler(profile_edit.edit_name, pattern="edit_name"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_gender, pattern="edit_gender"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_gender, pattern="set_gender_"))
@@ -79,15 +88,21 @@ app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
-# ===== 5. تاریخچه احساسات =====
+# ============================================================
+# 5. تاریخچه احساسات
+# ============================================================
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 app.add_handler(CommandHandler("history", history.show_history))
 
-# ===== 6. پیش‌بینی روز =====
+# ============================================================
+# 6. پیش‌بینی روز
+# ============================================================
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
-# ===== 7. خود گذشته =====
+# ============================================================
+# 7. خود گذشته
+# ============================================================
 app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
 app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
 app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
@@ -96,21 +111,31 @@ app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="pas
 app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
 app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
 
-# ===== 8. درمانگر شناختی =====
+# ============================================================
+# 8. درمانگر شناختی
+# ============================================================
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
-# ===== 9. MessageHandlerهای تخصصی =====
+# ============================================================
+# 9. MessageHandlerهای تخصصی (با شرط)
+# ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
-# ===== 10. گفتگو با دستیار (آخرین اولویت) =====
+# ============================================================
+# 10. گفتگو با دستیار (آخرین اولویت)
+# ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
-# ===== Error Handler =====
+# ============================================================
+# Error Handler
+# ============================================================
 app.add_error_handler(error_handler)
 
-# ===== وب سرور =====
+# ============================================================
+# وب سرور برای جلوگیری از خوابیدن Render
+# ============================================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -126,26 +151,26 @@ def run_http_server():
 
 threading.Thread(target=run_http_server, daemon=True).start()
 
-# ===== Scheduler =====
+# ============================================================
+# Scheduler
+# ============================================================
 start_scheduler()
 
-# ===== اجرا =====
+# ============================================================
+# اجرا
+# ============================================================
 if __name__ == "__main__":
-    # ✅ حذف Webhook برای جلوگیری از Conflict
+    # حذف Webhook برای جلوگیری از Conflict
     try:
         response = requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
         if response.status_code == 200:
-            logger.info("✅ Webhook deleted successfully")
+            logger.info("✅ Webhook deleted")
         else:
-            logger.warning(f"⚠️ Webhook deletion failed: {response.text}")
+            logger.warning(f"⚠️ Webhook deletion: {response.text}")
     except Exception as e:
         logger.warning(f"⚠️ خطا در حذف Webhook: {e}")
     
-    # ایجاد جداول دیتابیس
     Base.metadata.create_all(engine)
-    
     print("🚀 ربات دستیار هوشمند راه‌اندازی شد!")
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    # ✅ تنظیمات بهینه Polling برای کاهش Conflict
     app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
