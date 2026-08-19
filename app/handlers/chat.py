@@ -14,25 +14,24 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
     except Exception as e:
-        logger.error(f"❌ خطا در دیتابیس: {e}")
+        logger.error(f"❌ دیتابیس: {e}")
         db.close()
-        await update.message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+        await update.message.reply_text("❌ خطایی رخ داد.")
         return
     db.close()
     
     if not user:
-        await update.message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
+        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
     
     if context.user_data.get('current_section') != 'chat':
-        await update.message.reply_text("💡 لطفاً از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
+        await update.message.reply_text("💡 از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
         return
     
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
     
-    prompt = f"تو یک دستیار {user.chat_style} هستی. با لحن {user.chat_style} پاسخ بده.\n\nکاربر: {user_message}"
-    
+    prompt = f"تو یک دستیار {user.chat_style} هستی.\n\nکاربر: {user_message}"
     result = call_openrouter(prompt, temperature=0.9, max_tokens=256)
     
     await loading_msg.delete()
