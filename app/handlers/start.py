@@ -14,6 +14,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
     
+    # پاک کردن داده‌های قبلی برای جلوگیری از تداخل
     context.user_data.clear()
     
     if user:
