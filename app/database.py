@@ -10,5 +10,13 @@ engine = create_engine(
     max_overflow=10,
     pool_recycle=3600
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# ✅ تنظیم expire_on_commit=False برای جلوگیری از DetachedInstanceError
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+    expire_on_commit=False  # ← کلید رفع خطا
+)
+
 Base = declarative_base()
