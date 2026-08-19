@@ -1,17 +1,13 @@
-import requests
-import json
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-from app.config import config
 from app.database import SessionLocal
 from app.models import User
+from app.openrouter_helper import call_openrouter
 
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 chat_with_ai اجرا شد!")
-    
     user_id = update.effective_user.id
     
     db = SessionLocal()
@@ -35,60 +31,13 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
     
-    try:
-        url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://t.me/your_bot",  # اختیاری
-            "X-Title": "Life Assistant Bot"
-        }
-        payload = {
-            "model": config.OPENROUTER_MODEL,
-            "messages": [
-                {"role": "system", "content": f"تو یک دستیار {user.chat_style} هستی. با لحن {user.chat_style} پاسخ بده."},
-                {"role": "user", "content": user_message}
-            ],
-            "temperature": 0.9,
-            "max_tokens": 256
-        }
-        
-        logger.info(f"📤 ارسال به OpenRouter: {json.dumps(payload, ensure_ascii=False)[:200]}...")
-        
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        response_data = response.json()
-        
-        logger.info(f"📥 وضعیت OpenRouter: {response.status_code}")
-        logger.info(f"📄 پاسخ OpenRouter: {json.dumps(response_data, ensure_ascii=False)[:500]}...")
-        
-        if response.status_code == 200:
-            reply = response_data.get("choices", [{}])[0].get("message", {}).get("content")
-            if reply:
-                await loading_msg.delete()
-                await update.message.reply_text(reply)
-                return
-            else:
-                error_msg = "پاسخ خالی از OpenRouter"
-                logger.warning(f"⚠️ {error_msg}")
-                await loading_msg.delete()
-                await update.message.reply_text(f"⚠️ {error_msg}")
-        else:
-            error_msg = response_data.get("error", {}).get("message", "خطای ناشناخته")
-            logger.error(f"❌ خطای OpenRouter: {error_msg}")
-            await loading_msg.delete()
-            await update.message.reply_text(f"❌ خطا: {error_msg}")
-            
-    except requests.exceptions.Timeout:
-        await loading_msg.delete()
-        await update.message.reply_text("⏰ زمان پاسخ‌دهی طولانی شد. لطفاً دوباره تلاش کنید.")
-    except requests.exceptions.ConnectionError:
-        await loading_msg.delete()
-        await update.message.reply_text("🔌 اتصال به سرور برقرار نشد. لطفاً بعداً تلاش کنید.")
-    except json.JSONDecodeError as e:
-        logger.error(f"❌ خطا در پردازش JSON: {e}")
-        await loading_msg.delete()
-        await update.message.reply_text("⚠️ پاسخ سرور معتبر نیست.")
-    except Exception as e:
-        logger.error(f"❌ خطا: {str(e)}")
-        await loading_msg.delete()
-        await update.message.reply_text(f"❌ خطا: {str(e)}")
+    prompt = f"تو یک دستیار {user.chat_style} هستی. با لحن {user.chat_style} پاسخ بده.\n\nکاربر: {user_message}"
+    
+    result = call_openrouter(prompt, temperature=0.9, max_tokens=256)
+    
+    await loading_msg.delete()
+    
+    if result["success"]:
+        await update.message.reply_text(result["reply"])
+    else:
+        await update.message.reply_text(f"❌ خطا: {result['error']}")
