@@ -99,7 +99,7 @@ app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self
 # ===== 8. درمانگر شناختی =====
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
-# ===== 9. MessageHandlerهای تخصصی (با شرط داخلی) =====
+# ===== 9. MessageHandlerهای تخصصی =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
@@ -131,14 +131,21 @@ start_scheduler()
 
 # ===== اجرا =====
 if __name__ == "__main__":
-    # حذف Webhook برای جلوگیری از Conflict
+    # ✅ حذف Webhook برای جلوگیری از Conflict
     try:
-        requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
-        logger.info("✅ Webhook deleted")
+        response = requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
+        if response.status_code == 200:
+            logger.info("✅ Webhook deleted successfully")
+        else:
+            logger.warning(f"⚠️ Webhook deletion failed: {response.text}")
     except Exception as e:
         logger.warning(f"⚠️ خطا در حذف Webhook: {e}")
     
+    # ایجاد جداول دیتابیس
     Base.metadata.create_all(engine)
+    
     print("🚀 ربات دستیار هوشمند راه‌اندازی شد!")
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # ✅ تنظیمات بهینه Polling برای کاهش Conflict
     app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
