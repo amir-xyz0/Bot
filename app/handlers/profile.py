@@ -112,18 +112,24 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
     
+    # ✅ ایجاد Session جدید برای هر درخواست
     db = SessionLocal()
-    user = User(
-        user_id=update.effective_user.id,
-        preferred_name=context.user_data["preferred_name"],
-        gender=context.user_data["gender"],
-        age=context.user_data["age"],
-        chat_style=context.user_data["chat_style"]
-    )
-    db.add(user)
-    db.commit()
-    db.close()
-    logger.info(f"✅ کاربر {user.preferred_name} ذخیره شد!")
+    try:
+        user = User(
+            user_id=update.effective_user.id,
+            preferred_name=context.user_data["preferred_name"],
+            gender=context.user_data["gender"],
+            age=context.user_data["age"],
+            chat_style=context.user_data["chat_style"]
+        )
+        db.add(user)
+        db.commit()
+        # ✅ بعد از commit، دیگر به user دسترسی نداریم
+        logger.info(f"✅ کاربر {context.user_data['preferred_name']} ذخیره شد!")
+    except Exception as e:
+        logger.error(f"❌ خطا در ذخیره کاربر: {e}")
+    finally:
+        db.close()
     
     await query.message.reply_text("✅ **ثبت‌نام با موفقیت انجام شد!**")
     
