@@ -10,20 +10,22 @@ from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 
+# سوالات عمیق و علمی برای مصاحبه با گذشته
 PAST_QUESTIONS = [
-    {"id": "q1", "question": "وقتی به ۵ سال پیش نگاه می‌کنی، چه چیزی بیشتر تغییر کرده؟"},
-    {"id": "q2", "question": "بهترین تصمیمی که گرفتی چه بود؟"},
-    {"id": "q3", "question": "اگر می‌توانستی یک روز از گذشته را دوباره زندگی کنی، کدام روز بود؟"},
-    {"id": "q4", "question": "چیزی که در گذشته آرزو می‌کردی کاش می‌دانستی، امروز چیست؟"},
-    {"id": "q5", "question": "کدام باور قبلی را امروز قبول نداری؟"},
-    {"id": "q6", "question": "اگر به خودت در ۱۰ سال پیش پیام بفرستی، چه می‌گویی؟"},
-    {"id": "q7", "question": "چیزی که از آن می‌ترسیدی، امروز چطور به آن نگاه می‌کنی؟"},
-    {"id": "q8", "question": "بهترین درسی که از شکست گرفتی چه بود؟"},
+    {"id": "q1", "question": "وقتی به ۵ سال پیش نگاه می‌کنی، چه چیزی در زندگی‌ات بیشتر از همه تغییر کرده؟"},
+    {"id": "q2", "question": "بهترین تصمیمی که در زندگی گرفتی چه بود؟ چرا؟"},
+    {"id": "q3", "question": "اگر می‌توانستی یک روز از گذشته‌ات را دوباره زندگی کنی، کدام روز بود؟"},
+    {"id": "q4", "question": "چیزی که در گذشته آرزو می‌کردی کاش می‌دانستی، امروز چه چیزی است؟"},
+    {"id": "q5", "question": "کدام باور یا فکری که قبلاً داشتی، امروز آن را قبول نداری؟"},
+    {"id": "q6", "question": "اگر یک پیام به خودت در ۱۰ سال پیش بفرستی، چه می‌گویی؟"},
+    {"id": "q7", "question": "چیزی که در گذشته از آن می‌ترسیدی، امروز چطور به آن نگاه می‌کنی؟"},
+    {"id": "q8", "question": "بهترین درسی که از یک شکست یا ناامیدی گرفتی چه بود؟"},
     {"id": "q9", "question": "اگر گذشته‌ات یک کتاب بود، عنوانش چه بود؟"},
     {"id": "q10", "question": "چه چیزی را در گذشته رها کردی که امروز به آن افتخار می‌کنی؟"}
 ]
 
 async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ورود به بخش خود گذشته - نمایش گزینه‌ها"""
     user_id = update.effective_user.id
     query = update.callback_query
     if query:
@@ -43,7 +45,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = None
 
     if not user:
-        await message.reply_text("❗ ثبت‌نام نکرده‌اید.")
+        await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         db.close()
         return
 
@@ -54,12 +56,15 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if past_answers and len(past_answers) > 0:
         keyboard = [
-            [InlineKeyboardButton("📋 دیدن پاسخ‌ها", callback_data="past_self_show_answers")],
-            [InlineKeyboardButton("🔄 مصاحبه جدید", callback_data="past_self_new_interview")],
+            [InlineKeyboardButton("📋 دیدن پاسخ‌های قبلی", callback_data="past_self_show_answers")],
+            [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
             [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]
         ]
-        await message.reply_text("🕰️ خود گذشته\n\nشما قبلاً مصاحبه کرده‌اید.", reply_markup=InlineKeyboardMarkup(keyboard))
+        await message.reply_text(
+            "🕰️ **خود گذشته**\n\nشما قبلاً در مصاحبه شرکت کرده‌اید.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         db.close()
         return
 
@@ -70,14 +75,18 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_next_question(update, context)
 
 async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ارسال سوال بعدی مصاحبه"""
     step = context.user_data.get('past_self_step', 0)
     if step >= len(PAST_QUESTIONS):
         await finish_interview(update, context)
         return
 
     q = PAST_QUESTIONS[step]
-    text = f"🕰️ سوال {step+1} از {len(PAST_QUESTIONS)}\n\n{q['question']}\n\n✍️ پاسخ خود را بنویسید:"
-    keyboard = [[InlineKeyboardButton("⏹️ پایان", callback_data="past_self_end_interview")]]
+    text = (
+        f"🕰️ **مصاحبه با گذشته – سوال {step+1} از {len(PAST_QUESTIONS)}**\n\n"
+        f"{q['question']}\n\n✍️ پاسخ خود را بنویسید:"
+    )
+    keyboard = [[InlineKeyboardButton("⏹️ پایان مصاحبه", callback_data="past_self_end_interview")]]
 
     if update.callback_query:
         query = update.callback_query
@@ -89,8 +98,9 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """دریافت پاسخ کاربر – فقط در حالت مصاحبه"""
     if not context.user_data.get('past_self_mode'):
-        return  # فقط در حالت مصاحبه
+        return
 
     user_id = update.effective_user.id
     user_message = update.message.text
@@ -116,6 +126,7 @@ async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_next_question(update, context)
 
 async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """پایان مصاحبه و ذخیره پاسخ‌ها"""
     user_id = update.effective_user.id
     answers = context.user_data.get('past_self_answers', [])
 
@@ -126,14 +137,14 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user.personality_profile = answers
             db.commit()
     except Exception as e:
-        logger.error(f"خطا: {e}")
+        logger.error(f"خطا در ذخیره: {e}")
     finally:
         db.close()
 
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
 
-    text = f"✅ مصاحبه کامل شد! {len(answers)} پاسخ ذخیره شد."
+    text = f"✅ **مصاحبه کامل شد!**\n\nشما به {len(answers)} سوال پاسخ دادید."
     keyboard = [
         [InlineKeyboardButton("📋 دیدن پاسخ‌ها", callback_data="past_self_show_answers")],
         [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
@@ -150,6 +161,7 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """نمایش پاسخ‌های ذخیره‌شده"""
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
@@ -161,18 +173,19 @@ async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = None
 
     if not user or not user.personality_profile:
-        await query.edit_message_text("📭 پاسخی وجود ندارد.")
+        await query.edit_message_text("📭 شما هنوز مصاحبه‌ای کامل نکرده‌اید.")
         db.close()
         return
 
     answers = user.personality_profile
-    text = "📋 پاسخ‌های شما:\n\n"
+    text = "📋 **پاسخ‌های شما:**\n\n"
     for i, item in enumerate(answers, 1):
         q = item.get("question", "سوال")
-        a = item.get("answer", "پاسخ")[:60] + "..." if len(item.get("answer", "")) > 60 else item.get("answer", "پاسخ")
-        text += f"{i}. {q}\n   📝 {a}\n\n"
+        a = item.get("answer", "پاسخ")
+        a_short = a[:60] + "..." if len(a) > 60 else a
+        text += f"{i}. {q}\n   📝 {a_short}\n\n"
         if len(text) > 3500:
-            text += "\n... ادامه"
+            text += "\n... و بقیه"
             break
 
     keyboard = [
@@ -200,10 +213,13 @@ async def delete_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-    await query.edit_message_text("✅ پاسخ‌ها پاک شد.", reply_markup=InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔄 مصاحبه جدید", callback_data="past_self_new_interview")],
-        [InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]
-    ]))
+    await query.edit_message_text(
+        "✅ پاسخ‌ها پاک شد.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔄 مصاحبه جدید", callback_data="past_self_new_interview")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]
+        ])
+    )
 
 async def new_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -289,6 +305,7 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text("✅ گفتگوی آزاد پایان یافت.", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """پردازش گفتگوی آزاد با هوش مصنوعی"""
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
         return
 
@@ -317,12 +334,13 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 نام: {user.preferred_name}
 سن: {user.age}
-پاسخ‌های قبلی:
+پاسخ‌های قبلی به مصاحبه:
 {past_text if past_text else "مصاحبه‌ای کامل نشده است."}
 
 پیام کاربر: {user_message}
 
-پاسخ خود را به‌عنوان یک همراه صمیمی بنویس:"""
+پاسخ خود را به‌عنوان یک همراه صمیمی بنویس (با لحنی گرم و همدلانه):
+"""
 
     try:
         url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
