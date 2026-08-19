@@ -24,13 +24,11 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"🔥 get_name اجرا شد! نام: {update.message.text}")
     context.user_data["preferred_name"] = update.message.text
     
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
     
-    # حذف پیام ربات
     try:
         bot_msg_id = context.user_data.get('bot_msg_id')
         if bot_msg_id:
@@ -53,9 +51,11 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return GENDER
 
 async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"🔥 get_gender اجرا شد! جنسیت: {query.data}")
+    # ✅ دریافت query به درستی
     query = update.callback_query
     await query.answer()
+    logger.info(f"🔥 get_gender اجرا شد! جنسیت: {query.data}")
+    
     context.user_data["gender"] = query.data
     try:
         await query.message.delete()
@@ -103,9 +103,9 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return AGE
 
 async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"🔥 get_style اجرا شد! لحن: {query.data}")
     query = update.callback_query
     await query.answer()
+    logger.info(f"🔥 get_style اجرا شد! لحن: {query.data}")
     context.user_data["chat_style"] = query.data
     try:
         await query.message.delete()
