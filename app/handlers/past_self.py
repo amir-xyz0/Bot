@@ -1,18 +1,15 @@
 import logging
 import json
-import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from app.config import config
 from app.database import SessionLocal
 from app.models import User
+from app.openrouter_helper import call_openrouter
 from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 
-# ============================================================
 # سوالات عمیق و علمی برای مصاحبه با گذشته
-# ============================================================
 PAST_QUESTIONS = [
     {"id": "q1", "question": "وقتی به ۵ سال پیش نگاه می‌کنی، چه چیزی در زندگی‌ات بیشتر از همه تغییر کرده؟"},
     {"id": "q2", "question": "بهترین تصمیمی که در زندگی گرفتی چه بود؟ چرا؟"},
@@ -331,7 +328,7 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text("✅ گفتگوی آزاد پایان یافت.", reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ============================================================
-# ۱۱. پردازش گفتگوی آزاد با OpenRouter
+# ۱۱. پردازش گفتگوی آزاد با OpenRouter (با تابع کمکی)
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
@@ -371,33 +368,9 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     db.close()
 
-    try:
-        url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": config.OPENROUTER_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.85,
-            "max_tokens": 450
-        }
-
-        logger.info(f"📤 ارسال به OpenRouter (past_self)")
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        response_data = response.json()
-        logger.info(f"📥 وضعیت OpenRouter (past_self): {response.status_code}")
-
-        if response.status_code == 200:
-            reply = response_data.get("choices", [{}])[0].get("message", {}).get("content")
-            if reply:
-                await update.message.reply_text(f"🕰️ **همراه گذشته:**\n\n{reply}")
-                return
-        else:
-            error_msg = response_data.get("error", {}).get("message", "خطای ناشناخته")
-            logger.error(f"❌ خطای OpenRouter (past_self): {error_msg}")
-            await update.message.reply_text(f"❌ خطا: {error_msg}")
-    except Exception as e:
-        logger.error(f"❌ خطا: {e}")
-        await update.message.reply_text("🕰️ **همراه گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم.")
+    result = call_openrouter(prompt, temperature=0.85, max_tokens=450)
+    
+    if result["success"]:
+        await update.message.reply_text(f"🕰️ **همراه گذشته:**\n\n{result['reply']}")
+    else:
+        await update.message.reply_text(f"🕰️ **همراه گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. (خطا: {result['error']})")
