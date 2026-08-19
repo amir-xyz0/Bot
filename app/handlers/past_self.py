@@ -328,7 +328,7 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text("✅ گفتگوی آزاد پایان یافت.", reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ============================================================
-# ۱۱. پردازش گفتگوی آزاد با OpenRouter (با تابع کمکی)
+# ۱۱. پردازش گفتگوی آزاد با OpenRouter
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
