@@ -22,7 +22,6 @@ from datetime import datetime
 import pytz
 import requests
 
-# تنظیم لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
