@@ -12,7 +12,10 @@ from telegram.ext import (
     ContextTypes
 )
 from app.config import config
-from app.handlers import start, profile, menu, chat, history, profile_edit
+from app.handlers import (
+    start, profile, menu, chat, history, profile_edit,
+    predictor, past_self, therapist
+)
 from app.database import Base, engine
 from app.scheduler import start_scheduler
 from datetime import datetime
@@ -39,7 +42,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 # ===== 1. استارت =====
 app.add_handler(CommandHandler("start", start.start))
 
-# ===== 2. ثبت‌نام (با per_message=False) =====
+# ===== 2. ثبت‌نام =====
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -52,7 +55,7 @@ conv_handler = ConversationHandler(
         CommandHandler("start", start.start),
         CommandHandler("cancel", start.start)
     ],
-    per_message=False  # ✅ تغییر کلیدی
+    per_message=False
 )
 app.add_handler(conv_handler)
 
@@ -60,6 +63,9 @@ app.add_handler(conv_handler)
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
+app.add_handler(CallbackQueryHandler(menu.predict_menu, pattern="predict_menu"))
+app.add_handler(CallbackQueryHandler(menu.past_self_menu, pattern="past_self_menu"))
+app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
@@ -78,7 +84,27 @@ app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 app.add_handler(CommandHandler("history", history.show_history))
 
-# ===== 6. گفتگو با دستیار (آخرین اولویت) =====
+# ===== 6. پیش‌بینی روز =====
+app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
+
+# ===== 7. خود گذشته =====
+app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
+app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
+app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
+app.add_handler(CallbackQueryHandler(past_self.new_interview, pattern="past_self_new_interview"))
+app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="past_self_end_interview"))
+app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
+app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
+
+# ===== 8. درمانگر شناختی =====
+app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
+
+# ===== 9. MessageHandlerهای تخصصی (با شرط داخلی) =====
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
+
+# ===== 10. گفتگو با دستیار (آخرین اولویت) =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
 # ===== Error Handler =====
@@ -105,14 +131,14 @@ start_scheduler()
 
 # ===== اجرا =====
 if __name__ == "__main__":
-    # حذف Webhook
+    # حذف Webhook برای جلوگیری از Conflict
     try:
         requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
         logger.info("✅ Webhook deleted")
-    except:
-        pass
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در حذف Webhook: {e}")
     
     Base.metadata.create_all(engine)
-    print("🚀 ربات با Polling راه‌اندازی شد!")
+    print("🚀 ربات دستیار هوشمند راه‌اندازی شد!")
     print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
     app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
