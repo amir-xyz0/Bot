@@ -9,7 +9,6 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
-# سوالات استاندارد CBT
 THERAPY_QUESTIONS = {
     "start": "سلام! من اینجام تا بهت کمک کنم افکارت رو بهتر بشناسی.\n\nامروز چه احساسی داری؟",
     "identify": "چه فکری باعث این احساس شده؟",
@@ -18,8 +17,10 @@ THERAPY_QUESTIONS = {
     "action": "امروز چیکار می‌تونی بکنی که این فکر رو کمتر کنی؟"
 }
 
+# ============================================================
+# ۱. شروع جلسه درمانگری
+# ============================================================
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """شروع جلسه‌ی درمانگری"""
     user_id = update.effective_user.id
     query = update.callback_query
     if query:
@@ -53,8 +54,10 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     db.close()
 
+# ============================================================
+# ۲. پردازش مکالمه با درمانگر
+# ============================================================
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش مکالمه با درمانگر"""
     user_id = update.effective_user.id
     user_message = update.message.text
 
@@ -90,8 +93,9 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 ۲. در پایان پاسخ، سوال بعدی را بپرس (طبق مرحله‌ی بعد).
 ۳. اگر کاربر پاسخش کامل بود، به مرحله‌ی بعد برو.
 
-پاسخ خود را به‌عنوان یک درمانگر بنویس:
-"""
+پاسخ خود را به‌عنوان یک درمانگر بنویس:"""
+
+    db.close()
 
     try:
         url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
@@ -106,13 +110,14 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
             "max_tokens": 400
         }
 
+        logger.info(f"📤 ارسال به OpenRouter (therapist)")
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         response_data = response.json()
+        logger.info(f"📥 وضعیت OpenRouter (therapist): {response.status_code}")
 
         if response.status_code == 200:
             reply = response_data.get("choices", [{}])[0].get("message", {}).get("content")
             if reply:
-                # پیشرفت به مرحله‌ی بعد
                 steps = ['start', 'identify', 'challenge', 'reframe', 'action']
                 current_idx = steps.index(step) if step in steps else 0
                 if current_idx < len(steps) - 1:
@@ -123,18 +128,19 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
                     f"🧠 **درمانگر:**\n\n{reply}",
                     reply_markup=InlineKeyboardMarkup(keyboard)
                 )
-                db.close()
                 return
+        else:
+            error_msg = response_data.get("error", {}).get("message", "خطای ناشناخته")
+            logger.error(f"❌ خطای OpenRouter (therapist): {error_msg}")
+            await update.message.reply_text(f"❌ خطا: {error_msg}")
     except Exception as e:
-        logger.error(f"خطا در therapist: {e}")
+        logger.error(f"❌ خطا در therapist: {e}")
+        await update.message.reply_text("🧠 **درمانگر:**\n\nمتأسفم، الان کمی گیج شدم. بیا از اول شروع کنیم.")
 
-    await update.message.reply_text(
-        "🧠 **درمانگر:**\n\nمتأسفم، الان کمی گیج شدم. بیا از اول شروع کنیم."
-    )
-    db.close()
-
+# ============================================================
+# ۳. پایان جلسه درمانگری
+# ============================================================
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پایان جلسه‌ی درمانگری"""
     query = update.callback_query
     await query.answer()
     context.user_data['therapy_mode'] = False
@@ -147,7 +153,6 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
     await query.message.reply_text(
-        "✅ **جلسه‌ی درمانگری به پایان رسید.**\n\n"
-        "امیدوارم امروز کمی بهتر شده باشید.",
+        "✅ **جلسه‌ی درمانگری به پایان رسید.**\n\nامیدوارم امروز کمی بهتر شده باشید.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+        )
