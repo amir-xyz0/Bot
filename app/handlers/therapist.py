@@ -53,7 +53,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
 
 # ============================================================
-# ۲. پردازش مکالمه با درمانگر (با تابع کمکی)
+# ۲. پردازش مکالمه با درمانگر
 # ============================================================
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
