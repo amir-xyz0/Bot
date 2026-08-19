@@ -1,6 +1,5 @@
 import logging
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -18,16 +17,15 @@ from app.handlers import (
 )
 from app.database import Base, engine
 from app.scheduler import start_scheduler
-from datetime import datetime
-import pytz
-import requests
 
+# تنظیم لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
+# ===== Error Handler =====
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -45,7 +43,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start.start))
 
 # ============================================================
-# 2. ثبت‌نام (پروفایل)
+# 2. ثبت‌نام
 # ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
@@ -55,16 +53,13 @@ conv_handler = ConversationHandler(
         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
     },
-    fallbacks=[
-        CommandHandler("start", start.start),
-        CommandHandler("cancel", start.start)
-    ],
+    fallbacks=[CommandHandler("start", start.start)],
     per_message=False
 )
 app.add_handler(conv_handler)
 
 # ============================================================
-# 3. منوی اصلی
+# 3. منو
 # ============================================================
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
@@ -95,7 +90,7 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CommandHandler("history", history.show_history))
 
 # ============================================================
-# 6. پیش‌بینی روز
+# 6. پیش‌بینی
 # ============================================================
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
@@ -111,12 +106,12 @@ app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_fre
 app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
 
 # ============================================================
-# 8. درمانگر شناختی
+# 8. درمانگر
 # ============================================================
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# 9. MessageHandlerهای تخصصی (با شرط)
+# 9. MessageHandlerهای تخصصی
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
@@ -133,22 +128,9 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_a
 app.add_error_handler(error_handler)
 
 # ============================================================
-# وب سرور برای جلوگیری از خوابیدن Render
+# ایجاد جداول دیتابیس
 # ============================================================
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is running!")
-    def do_HEAD(self):
-        self.send_response(200)
-        self.end_headers()
-
-def run_http_server():
-    server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
-    server.serve_forever()
-
-threading.Thread(target=run_http_server, daemon=True).start()
+Base.metadata.create_all(engine)
 
 # ============================================================
 # Scheduler
@@ -156,20 +138,18 @@ threading.Thread(target=run_http_server, daemon=True).start()
 start_scheduler()
 
 # ============================================================
-# اجرا
+# اجرا با Webhook
 # ============================================================
 if __name__ == "__main__":
-    # حذف Webhook برای جلوگیری از Conflict
-    try:
-        response = requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
-        if response.status_code == 200:
-            logger.info("✅ Webhook deleted")
-        else:
-            logger.warning(f"⚠️ Webhook deletion: {response.text}")
-    except Exception as e:
-        logger.warning(f"⚠️ خطا در حذف Webhook: {e}")
+    port = int(os.environ.get("PORT", 10000))
+    webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost')}/{config.BOT_TOKEN}"
     
-    Base.metadata.create_all(engine)
-    print("🚀 ربات دستیار هوشمند راه‌اندازی شد!")
-    print(f"⏰ زمان سرور: {datetime.now(pytz.timezone('Asia/Tehran')).strftime('%Y-%m-%d %H:%M:%S')}")
-    app.run_polling(poll_interval=2.0, timeout=10, allowed_updates=None)
+    logger.info(f"🚀 ربات با Webhook روی پورت {port} راه‌اندازی شد!")
+    logger.info(f"🔗 Webhook URL: {webhook_url}")
+    
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=config.BOT_TOKEN,
+        webhook_url=webhook_url
+)
