@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes
 logger = logging.getLogger(__name__)
 
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """نمایش منوی اصلی"""
     query = update.callback_query
     if query:
         await query.answer()
@@ -37,11 +38,11 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ورود به بخش گفتگو"""
     query = update.callback_query
     await query.answer()
-    logger.info(f"🔥 chat_menu اجرا شد برای user_id: {update.effective_user.id}")
+    logger.info(f"🔥 chat_menu: user_id={update.effective_user.id}")
     context.user_data['current_section'] = 'chat'
-    logger.info(f"✅ current_section تنظیم شد: {context.user_data['current_section']}")
     try:
         await query.message.delete()
     except:
