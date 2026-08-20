@@ -1,6 +1,5 @@
 import logging
 import random
-from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
@@ -8,7 +7,6 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
-# کتابخانه پاسخ‌های از پیش‌نویس‌شده
 PREDICTIONS_GOOD = [
     "🌟 امروز روز خوبی برای شروع یک کار جدید است.",
     "💪 انرژی بالایی خواهی داشت، از آن استفاده کن.",
@@ -34,7 +32,6 @@ PREDICTIONS_NEUTRAL = [
 ]
 
 async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش پیش‌بینی امروز بر اساس داده‌های کاربر"""
     user_id = update.effective_user.id
 
     if update.callback_query:
@@ -59,42 +56,39 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_history = user.mood_history or []
 
     if len(mood_history) < 3:
+        # ✅ اضافه شدن دکمه بازگشت به خانه
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await message.reply_text(
             "📊 **داده‌ی کافی برای پیش‌بینی وجود ندارد.**\n\n"
-            "لطفاً حداقل ۳ روز احساسات خود را ثبت کنید."
+            "لطفاً حداقل ۳ روز احساسات خود را ثبت کنید تا بتوانم الگوهای شما را شناسایی کنم.\n\n"
+            "هر شب ساعت ۲۳ از شما می‌پرسم روزتان چطور بوده.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
 
-    # تحلیل دقیق‌تر با امتیازدهی
-    recent = mood_history[-10:]  # ۱۰ روز اخیر
+    # تحلیل دقیق
+    recent = mood_history[-10:]
     good_days = sum(1 for h in recent if h.get("mood") == "good")
     bad_days = sum(1 for h in recent if h.get("mood") == "bad")
 
-    # محاسبه امتیاز
     score = good_days * 1 - bad_days * 1.5
 
-    # تعیین وضعیت کلی
     if score > 2:
-        state = "good"
         base_predictions = PREDICTIONS_GOOD.copy()
         trend = "صعودی 📈"
     elif score < -1:
-        state = "bad"
         base_predictions = PREDICTIONS_BAD.copy()
         trend = "نزولی 📉"
     else:
-        state = "neutral"
         base_predictions = PREDICTIONS_NEUTRAL.copy()
         trend = "متغیر 🔄"
 
-    # انتخاب ۲ تا ۳ پیش‌بینی تصادفی
     random.shuffle(base_predictions)
     selected = base_predictions[:2]
 
-    # اضافه کردن یک پیش‌بینی شخصی‌سازی‌شده
-    if state == "good":
+    if score > 2:
         extra = "🌟 امروز بهترین نسخه‌ی خودت باش!"
-    elif state == "bad":
+    elif score < -1:
         extra = "💪 قوی باش، این روزها هم می‌گذرند."
     else:
         extra = "🌱 هر روز یک فرصت جدید است."
@@ -112,13 +106,12 @@ async def show_prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [InlineKeyboardButton("🔄 پیش‌بینی فردا", callback_data="predict_tomorrow")],
-        [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
+        [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
 
     await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def predict_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پیش‌بینی فردا (ویژه‌ی دکمه)"""
     query = update.callback_query
     await query.answer()
     try:
