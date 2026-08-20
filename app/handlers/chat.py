@@ -8,8 +8,9 @@ from app.openrouter_helper import call_openrouter
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 chat_with_ai اجرا شد!")
     user_id = update.effective_user.id
-    logger.info(f"🔥 chat_with_ai اجرا شد برای user_id: {user_id}")
+    logger.info(f"👤 user_id: {user_id}")
     
     db = SessionLocal()
     try:
@@ -22,25 +23,33 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
     
     if not user:
+        logger.warning("❌ کاربر ثبت‌نام نکرده")
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
     
+    logger.info(f"👤 کاربر: {user.preferred_name}")
+    logger.info(f"📌 current_section: {context.user_data.get('current_section')}")
+    
     if context.user_data.get('current_section') != 'chat':
+        logger.warning("❌ کاربر در بخش چت نیست")
         await update.message.reply_text("💡 از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
         return
     
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
     
-    # ساخت پرامپت
     prompt = f"تو یک دستیار {user.chat_style} هستی.\n\nکاربر: {user_message}"
     
-    # ارسال به OpenRouter (یا حالت تست)
+    logger.info(f"📩 پیام کاربر: {user_message[:50]}...")
+    logger.info(f"🔄 ارسال به OpenRouter...")
+    
     result = call_openrouter(prompt, temperature=0.9, max_tokens=256)
     
     await loading_msg.delete()
     
     if result["success"]:
+        logger.info("✅ پاسخ دریافت شد")
         await update.message.reply_text(result["reply"])
     else:
+        logger.error(f"❌ خطا: {result['error']}")
         await update.message.reply_text(f"❌ خطا: {result['error']}")
