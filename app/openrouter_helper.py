@@ -5,10 +5,7 @@ from app.config import config
 logger = logging.getLogger(__name__)
 
 def call_openrouter(prompt, temperature=0.8, max_tokens=400, section="general"):
-    """
-    ارسال درخواست به OpenRouter با پشتیبانی از بخش‌های مختلف
-    section: chat, therapist, past_self, predictor
-    """
+    """ارسال درخواست به OpenRouter با مشخص کردن بخش"""
     try:
         url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
         headers = {
