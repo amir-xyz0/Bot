@@ -18,14 +18,12 @@ from app.handlers import (
 from app.database import Base, engine
 from app.scheduler import start_scheduler
 
-# تنظیم لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# ===== Error Handler =====
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -111,14 +109,14 @@ app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# 9. MessageHandlerهای تخصصی
+# 9. MessageHandlerهای تخصصی (با شرط داخلی)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ============================================================
-# 10. گفتگو با دستیار (آخرین اولویت)
+# 10. گفتگو با دستیار (آخرین اولویت - عمومی)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
@@ -141,8 +139,17 @@ start_scheduler()
 # اجرا با Webhook
 # ============================================================
 if __name__ == "__main__":
+    import requests
+    
     port = int(os.environ.get("PORT", 10000))
-    webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost')}/{config.BOT_TOKEN}"
+    hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
+    webhook_url = f"https://{hostname}/{config.BOT_TOKEN}"
+    
+    try:
+        resp = requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
+        logger.info(f"✅ Webhook deleted: {resp.json()}")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not delete webhook: {e}")
     
     logger.info(f"🚀 ربات با Webhook روی پورت {port} راه‌اندازی شد!")
     logger.info(f"🔗 Webhook URL: {webhook_url}")
@@ -152,4 +159,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-)
+    )
