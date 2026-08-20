@@ -79,7 +79,11 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = None
 
     if not user:
-        await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        await message.reply_text(
+            "❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         db.close()
         return
 
@@ -131,7 +135,10 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"✍️ پاسخ خود را به‌صورت کامل بنویسید. هر چقدر دقیق‌تر، بهتر می‌توانم شما را بشناسم."
     )
 
-    keyboard = [[InlineKeyboardButton("⏹️ پایان مصاحبه", callback_data="past_self_end_interview")]]
+    keyboard = [
+        [InlineKeyboardButton("⏹️ پایان مصاحبه", callback_data="past_self_end_interview")],
+        [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
+    ]
 
     if update.callback_query:
         query = update.callback_query
@@ -236,7 +243,11 @@ async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = None
 
     if not user or not user.personality_profile:
-        await query.edit_message_text("📭 شما هنوز مصاحبه‌ای کامل نکرده‌اید.")
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        await query.edit_message_text(
+            "📭 شما هنوز مصاحبه‌ای کامل نکرده‌اید.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         db.close()
         return
 
@@ -256,7 +267,7 @@ async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
         [InlineKeyboardButton("🗑️ پاک کردن پاسخ‌ها", callback_data="past_self_delete_answers")],
-        [InlineKeyboardButton("🔙 بازگشت", callback_data="past_self_menu")]
+        [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
 
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -364,7 +375,11 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = None
 
     if not user:
-        await query.edit_message_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        await query.edit_message_text(
+            "❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         db.close()
         return
 
@@ -398,7 +413,10 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🌱 **با خودت در گذشته حرف بزن...**"
         )
 
-    keyboard = [[InlineKeyboardButton("🔚 پایان گفتگو", callback_data="past_self_end_free_chat")]]
+    keyboard = [
+        [InlineKeyboardButton("🔚 پایان گفتگو", callback_data="past_self_end_free_chat")],
+        [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
+    ]
     await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ============================================================
@@ -424,10 +442,10 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================================
-# ۱۱. پردازش گفتگوی آزاد با گذشته (پرامپت ویژه)
+# ۱۱. پردازش گفتگوی آزاد با گذشته (پرامپت اختصاصی)
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش مکالمه با نسخه‌ی گذشته خود (پرامپت اختصاصی)"""
+    """پردازش مکالمه با نسخه‌ی گذشته خود (پرامپت ویژه و مستقل)"""
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
         return
 
@@ -441,8 +459,7 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
         user = None
 
     if not user:
-        await update.message.reply_text("❗ شما ثبت‌نام نکرده‌اید.")
-        db.close()
+        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید.")
         return
 
     # دریافت اطلاعات کاربر
@@ -469,15 +486,16 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
             past_text += f"- {item.get('question', '')}\n  پاسخ: {item.get('answer', '')[:120]}...\n"
 
     # ============================================================
-    # پرامپت اختصاصی خود گذشته – گفتگو با نسخه‌ی قدیمی خود
+    # پرامپت اختصاصی خود گذشته – کاملاً متفاوت از سایر بخش‌ها
     # ============================================================
     prompt = f"""تو «نسخه‌ی گذشته» {user.preferred_name} هستی، حدود ۳ تا ۵ سال پیش.
 
-ویژگی‌های تو:
-- همان شخصیت و باورهای قبلی را داری (بر اساس پاسخ‌های کاربر به سوالات گذشته)
-- لحن و سبک گفتارت طبیعی، صمیمی و انسانی است
-- از دیدگاه گذشته‌ات به مسائل نگاه می‌کنی
-- با کاربر (که همان خودت در زمان حال هستی) گفتگو می‌کنی
+ویژگی‌های تو که این بخش را از دیگر بخش‌های ربات متمایز می‌کند:
+- تو همان شخص هستی، اما در زمان گذشته
+- باورها، نگرش‌ها و سبک گفتار تو متعلق به آن زمان است
+- پاسخ‌هایت طبیعی، انسانی و صمیمی است، انگار که یک دوست قدیمی با تو حرف می‌زند
+- هیچ‌گاه پاسخ‌های رباتیک یا کلیشه‌ای نمی‌دهی
+- از کلماتی استفاده می‌کنی که شاید امروز کاربر دیگر از آنها استفاده نمی‌کند
 
 اطلاعات کاربر در زمان حال:
 - نام: {user.preferred_name}
@@ -493,22 +511,25 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 وظیفه‌ات:
 ۱. پاسخ بده طوری که انگار خودِ آن شخص در گذشته هستی.
-۲. از کلماتی استفاده کن که در آن زمان به کار می‌بردی.
+۲. از کلمات و عباراتی استفاده کن که در آن زمان به کار می‌بردی.
 ۳. با صمیمیت و گرمی پاسخ بده، انگار با خودت داری حرف می‌زنی.
 ۴. اگر کاربر از گذشته‌ات سوال می‌کند، با توجه به شخصیت گذشته‌ات پاسخ بده.
+۵. هرگز به کاربر نگو که یک ربات هستی – تو خودِ او هستی در زمان گذشته.
 
-پاسخ خود را به‌عنوان «خود گذشته» بنویس (بدون توضیحات اضافی):"""
+پاسخ خود را به‌عنوان «خود گذشته» بنویس (بدون توضیحات اضافی، فقط همان‌طور که در گذشته حرف می‌زدی):"""
 
     db.close()
 
     # ============================================================
-    # ارسال به OpenRouter
+    # ارسال به OpenRouter با بخش جداگانه
     # ============================================================
-    result = call_openrouter(prompt, temperature=0.85, max_tokens=500)
+    result = call_openrouter(prompt, temperature=0.85, max_tokens=500, section="past_self")
 
     if result["success"]:
         await update.message.reply_text(f"🕰️ **خود گذشته:**\n\n{result['reply']}")
     else:
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await update.message.reply_text(
-            f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. شاید بعداً بهتر بتونم کمک کنم."
-        )
+            f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. شاید بعداً بهتر بتونم کمک کنم.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+    )
