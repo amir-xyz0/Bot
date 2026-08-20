@@ -1,5 +1,8 @@
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+
+logger = logging.getLogger(__name__)
 
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -36,6 +39,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    logger.info(f"🔥 chat_menu اجرا شد برای user_id: {update.effective_user.id}")
     context.user_data['current_section'] = 'chat'
     try:
         await query.message.delete()
@@ -51,18 +55,21 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def predict_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    logger.info(f"🔥 predict_menu اجرا شد")
     from app.handlers import predictor
     await predictor.show_prediction(update, context)
 
 async def past_self_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    logger.info(f"🔥 past_self_menu اجرا شد")
     from app.handlers import past_self
     await past_self.start_past_self(update, context)
 
 async def therapy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    logger.info(f"🔥 therapy_menu اجرا شد")
     from app.handlers import therapist
     await therapist.start_therapy(update, context)
 
