@@ -33,9 +33,14 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
 
     if not user:
-        await message.reply_text("❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        await message.reply_text(
+            "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         return
 
+    # ✅ تنظیم حالت درمانگر (بدون نیاز به current_section)
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
 
@@ -49,6 +54,7 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     user_message = update.message.text
 
+    # ✅ فقط چک کردن حالت درمانگر، نه current_section
     if not context.user_data.get('therapy_mode'):
         return
 
@@ -63,15 +69,16 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     step = context.user_data.get('therapy_step', 'start')
 
     # ============================================================
-    # پرامپت اختصاصی درمانگر – فلسفی، عمیق و همدلانه
+    # پرامپت اختصاصی درمانگر – کاملاً مستقل از chat_style کاربر
     # ============================================================
     prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
 
 ویژگی‌های تو:
-- لحنت گرم، عمیق و انسانی است
+- لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی خشک)
 - مانند یک حکیم یا مشاور بزرگ صحبت می‌کنی
 - از جملات تأمل‌برانگیز و پرسش‌های سقراطی استفاده می‌کنی
 - هرگز قضاوت نمی‌کنی، فقط همراهی می‌کنی
+- پاسخ‌هایت سرشار از همدلی و درک عمیق است
 
 مرحله فعلی جلسه: {step}
 سوال استاندارد این مرحله: {THERAPY_QUESTIONS.get(step, '')}
@@ -88,7 +95,7 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 ۳. در پایان، سوال بعدی را به‌صورت طبیعی بپرس.
 ۴. از جملات فلسفی و الهام‌بخش استفاده کن.
 
-پاسخ خود را به‌عنوان یک درمانگر بنویس:"""
+پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون مقدمه‌چینی اضافی):"""
 
     result = call_openrouter(prompt, temperature=0.75, max_tokens=500, section="therapist")
 
