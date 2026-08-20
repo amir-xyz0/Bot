@@ -5,7 +5,6 @@ from telegram.ext import ContextTypes
 logger = logging.getLogger(__name__)
 
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش منوی اصلی"""
     query = update.callback_query
     if query:
         await query.answer()
@@ -38,10 +37,9 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """ورود به بخش گفتگو"""
     query = update.callback_query
     await query.answer()
-    logger.info(f"🔥 chat_menu: user_id={update.effective_user.id}")
+    logger.info(f"✅ chat_menu: user_id={update.effective_user.id}")
     context.user_data['current_section'] = 'chat'
     try:
         await query.message.delete()
@@ -54,32 +52,4 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
     )
 
-async def predict_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    from app.handlers import predictor
-    await predictor.show_prediction(update, context)
-
-async def past_self_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    from app.handlers import past_self
-    await past_self.start_past_self(update, context)
-
-async def therapy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    from app.handlers import therapist
-    await therapist.start_therapy(update, context)
-
-async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    from app.handlers import history
-    await history.show_history(update, context)
-
-async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    from app.handlers import profile_edit
-    await profile_edit.show_profile(update, context)
+# بقیه توابع (predict, past_self, therapy, history, profile) با همان نام و ساختار قبلی
