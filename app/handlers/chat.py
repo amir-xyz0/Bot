@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    logger.info(f"🔥 chat_with_ai اجرا شد برای user_id: {user_id}")
     
     db = SessionLocal()
     try:
@@ -31,7 +32,10 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
     
+    # ساخت پرامپت
     prompt = f"تو یک دستیار {user.chat_style} هستی.\n\nکاربر: {user_message}"
+    
+    # ارسال به OpenRouter (یا حالت تست)
     result = call_openrouter(prompt, temperature=0.9, max_tokens=256)
     
     await loading_msg.delete()
