@@ -8,28 +8,31 @@ logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    logger.info(f"🔥 start اجرا شد برای user_id: {user_id}")
-    
+    logger.info(f"🔥 start: user_id={user_id}")
+
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
-    
-    # پاک کردن داده‌های قبلی برای جلوگیری از تداخل
+
     context.user_data.clear()
-    
+
     if user:
         from app.handlers.menu import main_menu
         await main_menu(update, context)
         return
-    
+
+    # ✅ حذف پیام دیسکریپشن (بیو) بعد از کلیک روی دکمه شروع
+    # این پیام خودکار توسط تلگرام ارسال شده، اما ما پیام جدیدی می‌فرستیم و پیام قبلی را حذف می‌کنیم
+    try:
+        await update.message.delete()
+    except:
+        pass
+
     text = (
-        "🤖 **به دستیار هوشمند خود خوش آمدید**\n\n"
-        "من اینجا هستم تا به شما در مدیریت روزانه، "
-        "گفتگو و ثبت احساسات کمک کنم.\n\n"
-        "برای شروع، لطفاً ثبت‌نام را تکمیل کنید."
+        "✨ **به «همراه روزمره‌ات» خوش آمدی!** ✨\n\n"
+        "من اینجام تا روزهایت را سبک‌تر، زیباتر و هدف‌مندتر کنم.\n"
+        "با هم مسیر رشد، آرامش و شادی را می‌سازیم.\n\n"
+        "🌱 **برای شروع، بیا کمی بیشتر همدیگر را بشناسیم...**"
     )
-    keyboard = [[InlineKeyboardButton("🚀 شروع ثبت‌نام", callback_data="start_profile")]]
-    await update.message.reply_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    keyboard = [[InlineKeyboardButton("🌟 شروع ثبت‌نام", callback_data="start_profile")]]
+    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
