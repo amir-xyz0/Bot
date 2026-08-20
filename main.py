@@ -41,7 +41,7 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start.start))
 
 # ============================================================
-# 2. ثبت‌نام
+# 2. ثبت‌نام (ConversationHandler)
 # ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
@@ -57,7 +57,7 @@ conv_handler = ConversationHandler(
 app.add_handler(conv_handler)
 
 # ============================================================
-# 3. منو
+# 3. منو و دکمه‌ها
 # ============================================================
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
@@ -109,14 +109,14 @@ app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# 9. MessageHandlerهای تخصصی (با شرط داخلی)
+# 9. MessageHandlerهای تخصصی (با شرط)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ============================================================
-# 10. گفتگو با دستیار (آخرین اولویت - عمومی)
+# 10. گفتگو با دستیار (آخرین اولویت)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
@@ -126,13 +126,9 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_a
 app.add_error_handler(error_handler)
 
 # ============================================================
-# ایجاد جداول دیتابیس
+# دیتابیس و Scheduler
 # ============================================================
 Base.metadata.create_all(engine)
-
-# ============================================================
-# Scheduler
-# ============================================================
 start_scheduler()
 
 # ============================================================
@@ -140,20 +136,19 @@ start_scheduler()
 # ============================================================
 if __name__ == "__main__":
     import requests
-    
     port = int(os.environ.get("PORT", 10000))
     hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
     webhook_url = f"https://{hostname}/{config.BOT_TOKEN}"
-    
+
     try:
         resp = requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
         logger.info(f"✅ Webhook deleted: {resp.json()}")
     except Exception as e:
         logger.warning(f"⚠️ Could not delete webhook: {e}")
-    
+
     logger.info(f"🚀 ربات با Webhook روی پورت {port} راه‌اندازی شد!")
     logger.info(f"🔗 Webhook URL: {webhook_url}")
-    
+
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
