@@ -8,32 +8,25 @@ from app.openrouter_helper import call_openrouter
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش پیام‌های کاربر در بخش گفتگو"""
-    logger.info("🔥 chat_with_ai: شروع")
+    """پردازش پیام‌های بخش گفتگو"""
     user_id = update.effective_user.id
-    logger.info(f"👤 user_id: {user_id}")
+    logger.info(f"🔥 chat_with_ai: user_id={user_id}")
 
-    # ۱. چک کردن ثبت‌نام
+    # ۱. بررسی ثبت‌نام
     db = SessionLocal()
-    try:
-        user = db.query(User).filter_by(user_id=user_id).first()
-    except Exception as e:
-        logger.error(f"❌ خطا در دیتابیس: {e}")
-        db.close()
-        await update.message.reply_text("❌ خطایی رخ داد.")
-        return
+    user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
 
     if not user:
-        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
+        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
-    # ۲. چک کردن بخش چت
+    # ۲. بررسی بخش چت
     if context.user_data.get('current_section') != 'chat':
-        await update.message.reply_text("💡 لطفاً از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
+        await update.message.reply_text("💡 از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
         return
 
-    # ۳. دریافت پیام
+    # ۳. دریافت پیام کاربر
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
 
@@ -48,7 +41,7 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     # ۶. ارسال پاسخ
-    if result["success"]:
+    if result.get("success"):
         await update.message.reply_text(result["reply"])
     else:
-        await update.message.reply_text(f"❌ خطا: {result['error']}")
+        await update.message.reply_text(f"❌ خطا: {result.get('error', 'مشکل ناشناخته')}")
