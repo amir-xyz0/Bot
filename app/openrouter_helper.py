@@ -7,13 +7,8 @@ from app.config import config
 logger = logging.getLogger(__name__)
 
 def call_openrouter(prompt, temperature=0.8, max_tokens=400):
-    """
-    تلاش برای ارتباط با OpenRouter، در صورت خطا پاسخ ساختگی می‌دهد
-    """
-    logger.info("=" * 50)
-    logger.info("🚀 شروع درخواست به OpenRouter")
-    logger.info(f"📝 پرامپت: {prompt[:200]}...")
-    
+    """ارسال درخواست به OpenRouter با fallback پاسخ ساختگی"""
+    logger.info("📤 ارسال درخواست به OpenRouter...")
     try:
         url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
         headers = {
@@ -28,35 +23,28 @@ def call_openrouter(prompt, temperature=0.8, max_tokens=400):
             "temperature": temperature,
             "max_tokens": max_tokens
         }
-        
-        logger.info(f"📤 ارسال به OpenRouter...")
+
         response = requests.post(url, json=payload, headers=headers, timeout=30)
-        
-        logger.info(f"📥 وضعیت: {response.status_code}")
-        logger.info(f"📄 پاسخ: {response.text[:500]}...")
-        
         if response.status_code == 200:
             data = response.json()
             reply = data.get("choices", [{}])[0].get("message", {}).get("content")
             if reply:
-                logger.info("✅ پاسخ دریافت شد")
+                logger.info("✅ پاسخ از OpenRouter دریافت شد.")
                 return {"success": True, "reply": reply}
             else:
-                logger.warning("⚠️ پاسخ خالی")
+                logger.warning("⚠️ پاسخ خالی از OpenRouter.")
         else:
-            error_data = response.json() if response.text else {}
-            error_msg = error_data.get("error", {}).get("message", f"خطای {response.status_code}")
-            logger.error(f"❌ خطای OpenRouter: {error_msg}")
-            
+            logger.error(f"❌ خطای OpenRouter: {response.status_code} - {response.text}")
     except Exception as e:
-        logger.error(f"❌ خطا: {str(e)}")
-    
-    # اگر خطا بود، پاسخ ساختگی
-    logger.info("🧪 استفاده از پاسخ ساختگی")
-    fake_responses = [
-        "سلام! این یک پاسخ آزمایشی است. ربات شما به درستی کار می‌کند.",
+        logger.error(f"❌ خطا در ارتباط با OpenRouter: {e}")
+
+    # Fallback: پاسخ ساختگی
+    fake_replies = [
+        "سلام! این یک پاسخ آزمایشی است.",
+        "ربات به درستی کار می‌کند.",
         "OpenRouter در دسترس نیست، اما من اینجام!",
-        "ربات آماده است! این یک پاسخ تست است.",
-        "تبریک! ربات شما به درستی راه‌اندازی شده است."
+        "این یک پاسخ تست از طرف ربات است."
     ]
-    return {"success": True, "reply": random.choice(fake_responses)}
+    reply = random.choice(fake_replies)
+    logger.info(f"🧪 پاسخ ساختگی: {reply}")
+    return {"success": True, "reply": reply}
