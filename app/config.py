@@ -16,6 +16,6 @@ class Config:
         raise ValueError("OPENROUTER_API_KEY is required!")
     
     OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-    OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")  # ← مدل رایگان و مطمئن‌تر
+    OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")  # ✅ ارتقا
 
 config = Config()
