@@ -8,45 +8,47 @@ from app.openrouter_helper import call_openrouter
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 chat_with_ai اجرا شد!")
+    """پردازش پیام‌های کاربر در بخش گفتگو"""
+    logger.info("🔥 chat_with_ai: شروع")
     user_id = update.effective_user.id
     logger.info(f"👤 user_id: {user_id}")
-    
+
+    # ۱. چک کردن ثبت‌نام
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
     except Exception as e:
-        logger.error(f"❌ دیتابیس: {e}")
+        logger.error(f"❌ خطا در دیتابیس: {e}")
         db.close()
         await update.message.reply_text("❌ خطایی رخ داد.")
         return
     db.close()
-    
+
     if not user:
-        logger.warning("❌ کاربر ثبت‌نام نکرده")
-        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
+        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
-    
-    logger.info(f"👤 کاربر: {user.preferred_name}")
-    logger.info(f"📌 current_section: {context.user_data.get('current_section')}")
-    
+
+    # ۲. چک کردن بخش چت
     if context.user_data.get('current_section') != 'chat':
-        logger.warning("❌ کاربر در بخش چت نیست")
-        await update.message.reply_text("💡 از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
+        await update.message.reply_text("💡 لطفاً از منو، بخش «گفتگو با دستیار» را انتخاب کنید.")
         return
-    
+
+    # ۳. دریافت پیام
     user_message = update.message.text
-    logger.info(f"📩 پیام کاربر: {user_message[:50]}...")
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
-    
+
+    # ۴. ساخت پرامپت
     prompt = f"تو یک دستیار {user.chat_style} هستی.\n\nکاربر: {user_message}"
     result = call_openrouter(prompt, temperature=0.9, max_tokens=256)
-    
-    await loading_msg.delete()
-    
+
+    # ۵. حذف پیام لودینگ
+    try:
+        await loading_msg.delete()
+    except:
+        pass
+
+    # ۶. ارسال پاسخ
     if result["success"]:
-        logger.info("✅ پاسخ دریافت شد")
         await update.message.reply_text(result["reply"])
     else:
-        logger.error(f"❌ خطا: {result['error']}")
         await update.message.reply_text(f"❌ خطا: {result['error']}")
