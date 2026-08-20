@@ -36,13 +36,10 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     user_message = update.message.text
+    logger.info(f"📩 پیام کاربر: {user_message[:50]}...")
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
     
     prompt = f"تو یک دستیار {user.chat_style} هستی.\n\nکاربر: {user_message}"
-    
-    logger.info(f"📩 پیام کاربر: {user_message[:50]}...")
-    logger.info(f"🔄 ارسال به OpenRouter...")
-    
     result = call_openrouter(prompt, temperature=0.9, max_tokens=256)
     
     await loading_msg.delete()
