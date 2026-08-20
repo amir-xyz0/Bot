@@ -7,6 +7,7 @@ from app.openrouter_helper import call_openrouter
 
 logger = logging.getLogger(__name__)
 
+# سوالات راهنما برای درمانگر (اختیاری)
 THERAPY_QUESTIONS = {
     "start": "سلام! من اینجام تا بهت کمک کنم افکارت رو بهتر بشناسی.\n\nامروز چه احساسی داری؟",
     "identify": "چه فکری باعث این احساس شده؟",
@@ -15,9 +16,6 @@ THERAPY_QUESTIONS = {
     "action": "امروز چیکار می‌تونی بکنی که این فکر رو کمتر کنی؟"
 }
 
-# ============================================================
-# ۱. شروع جلسه درمانگری
-# ============================================================
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     query = update.callback_query
@@ -32,14 +30,11 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = update.message
 
     db = SessionLocal()
-    try:
-        user = db.query(User).filter_by(user_id=user_id).first()
-    except:
-        user = None
+    user = db.query(User).filter_by(user_id=user_id).first()
+    db.close()
 
     if not user:
-        await message.reply_text("❗ شما ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
-        db.close()
+        await message.reply_text("❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.")
         return
 
     context.user_data['therapy_mode'] = True
@@ -47,14 +42,10 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
-        f"🧠 **درمانگر شناختی**\n\n{THERAPY_QUESTIONS['start']}",
+        f"🧠 **درمانگر درون**\n\n{THERAPY_QUESTIONS['start']}",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-    db.close()
 
-# ============================================================
-# ۲. پردازش مکالمه با درمانگر
-# ============================================================
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_message = update.message.text
@@ -63,41 +54,52 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     db = SessionLocal()
-    try:
-        user = db.query(User).filter_by(user_id=user_id).first()
-    except:
-        user = None
+    user = db.query(User).filter_by(user_id=user_id).first()
+    db.close()
 
     if not user:
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید.")
-        db.close()
         return
 
     step = context.user_data.get('therapy_step', 'start')
 
-    prompt = f"""تو یک درمانگر شناختی (CBT) هستی که با کاربری همدلانه و حرفه‌ای گفتگو می‌کند.
+    # ============================================================
+    # پرامپت اختصاصی درمانگر – همدلانه، فلسفی و مشاوره‌ای
+    # ============================================================
+    prompt = f"""تو یک درمانگر شناختی-رفتاری (CBT) با سبک «همدلانه و فلسفی» هستی. 
+تو با کاربری گفتگو می‌کنی که به دنبال درک بهتر احساسات و افکار خود است.
 
-مرحله فعلی: {step}
+ویژگی‌های تو:
+- لحن گرم، صمیمی و انسانی
+- عمیق و تأمل‌برانگیز
+- پرسش‌های سقراطی و کاوشگر
+- همدلی عمیق بدون قضاوت
+
+مرحله فعلی جلسه: {step}
 سوال استاندارد این مرحله: {THERAPY_QUESTIONS.get(step, '')}
 
-نام کاربر: {user.preferred_name}
-سن: {user.age}
-لحن موردعلاقه: {user.chat_style}
+اطلاعات کاربر:
+- نام: {user.preferred_name}
+- سن: {user.age}
+- لحن موردعلاقه‌اش: {user.chat_style}
 
 پیام کاربر: {user_message}
 
 وظیفه‌ات:
-۱. با همدلی، گرمی و احترام پاسخ بده.
-۲. در پایان پاسخ، سوال بعدی را بپرس (طبق مرحله‌ی بعد).
-۳. اگر کاربر پاسخش کامل بود، به مرحله‌ی بعد برو.
+۱. با همدلی و احترام عمیق پاسخ بده.
+۲. پاسخ باید حس کند که یک انسان واقعی با او حرف می‌زند، نه یک ربات.
+۳. در پایان پاسخ، سوال بعدی را به‌صورت طبیعی بپرس.
+۴. از جملات فلسفی و الهام‌بخش استفاده کن (نه خشک و تکنیکی).
 
-پاسخ خود را به‌عنوان یک درمانگر بنویس:"""
+پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون مقدمه‌چینی اضافی):"""
 
-    db.close()
+    # ============================================================
+    # ارسال به OpenRouter
+    # ============================================================
+    result = call_openrouter(prompt, temperature=0.75, max_tokens=500)
 
-    result = call_openrouter(prompt, temperature=0.7, max_tokens=400)
-    
     if result["success"]:
+        # پیشرفت به مرحله بعد
         steps = ['start', 'identify', 'challenge', 'reframe', 'action']
         current_idx = steps.index(step) if step in steps else 0
         if current_idx < len(steps) - 1:
@@ -109,11 +111,11 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
-        await update.message.reply_text(f"🧠 **درمانگر:**\n\nمتأسفم، الان کمی گیج شدم. (خطا: {result['error']})")
+        await update.message.reply_text(
+            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. بیا از اول شروع کنیم.\n"
+            f"{THERAPY_QUESTIONS['start']}"
+        )
 
-# ============================================================
-# ۳. پایان جلسه درمانگری
-# ============================================================
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -125,8 +127,10 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
 
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
-        "✅ **جلسه‌ی درمانگری به پایان رسید.**\n\nامیدوارم امروز کمی بهتر شده باشید.",
+        "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
+        "از اینکه اجازه دادی کنارت باشم سپاسگزارم.\n"
+        "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
