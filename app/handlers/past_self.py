@@ -89,7 +89,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ✅ تنظیم current_section برای جلوگیری از تداخل با گفتگو
     context.user_data['current_section'] = 'past_self'
-    logger.info(f"🕰️ start_past_self: user_id={user_id}, current_section تنظیم شد به 'past_self'")
+    logger.info(f"🕰️ start_past_self: user_id={user_id}, current_section='past_self'")
 
     try:
         past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else None
@@ -458,7 +458,6 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش مکالمه با نسخه‌ی گذشته خود (کاملاً مستقل از chat_style)"""
-    # دیباگ: نمایش وضعیت
     logger.info(f"🕰️ chat_with_past_self: user_id={update.effective_user.id}, "
                 f"past_self_mode={context.user_data.get('past_self_mode')}, "
                 f"past_self_free_chat={context.user_data.get('past_self_free_chat')}")
