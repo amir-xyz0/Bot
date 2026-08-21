@@ -93,7 +93,7 @@ app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# MessageHandlerها (به ترتیب)
+# MessageHandlerها (ترتیب دقیق مانند گیت‌هاب)
 # ============================================================
 # ۱. گفتگو (اول)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
