@@ -5,7 +5,6 @@ from app.config import config
 logger = logging.getLogger(__name__)
 
 def call_openrouter(prompt, temperature=0.8, max_tokens=400, section="general"):
-    """ارسال درخواست به OpenRouter با مشخص کردن بخش"""
     try:
         url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
         headers = {
@@ -21,14 +20,12 @@ def call_openrouter(prompt, temperature=0.8, max_tokens=400, section="general"):
             "max_tokens": max_tokens
         }
 
-        logger.info(f"📤 ارسال به OpenRouter (بخش: {section})...")
         response = requests.post(url, json=payload, headers=headers, timeout=30)
 
         if response.status_code == 200:
             data = response.json()
             reply = data.get("choices", [{}])[0].get("message", {}).get("content")
             if reply:
-                logger.info(f"✅ پاسخ از OpenRouter دریافت شد (بخش: {section})")
                 return {"success": True, "reply": reply}
             else:
                 return {"success": False, "error": "پاسخ خالی"}
