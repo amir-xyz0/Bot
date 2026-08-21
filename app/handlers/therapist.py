@@ -55,8 +55,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     user_message = update.message.text
 
-    logger.info(f"🧠 chat_with_therapist: user_id={user_id}, therapy_mode={context.user_data.get('therapy_mode')}")
-
     if not context.user_data.get('therapy_mode'):
         return
 
@@ -70,10 +68,13 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     step = context.user_data.get('therapy_step', 'start')
 
+    # ============================================================
+    # پرامپت مستقل از chat_style
+    # ============================================================
     prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
 
 ویژگی‌های تو:
-- لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی خشک)
+- لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی)
 - مانند یک حکیم یا مشاور بزرگ صحبت می‌کنی
 - از جملات تأمل‌برانگیز و پرسش‌های سقراطی استفاده می‌کنی
 - هرگز قضاوت نمی‌کنی، فقط همراهی می‌کنی
