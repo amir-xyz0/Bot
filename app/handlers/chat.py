@@ -19,9 +19,9 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
-    # ✅ اگر کاربر در بخش تخصصی است، کاری نکن (اجازه بده هندلر تخصصی کار کند)
+    # ✅ فقط در بخش گفتگو اجرا شود
     if context.user_data.get('current_section') != 'chat':
-        logger.info(f"⏭️ chat_with_ai: عبور از بخش غیر گفتگو (current_section={context.user_data.get('current_section')})")
+        logger.info(f"⏭️ chat_with_ai: عبور (current_section={context.user_data.get('current_section')})")
         return
 
     user_message = update.message.text
