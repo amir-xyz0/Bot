@@ -42,7 +42,7 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - پاسخ‌هایت مختصر، مفید و دلنشین است
 
 کاربر: {user_message}
-
+- با کاربر همدلی می‌کنی و پاسخ‌هایت گرم است
 پاسخ خود را با لحن {style_text} بنویس:"""
 
     result = call_openrouter(prompt, temperature=0.85, max_tokens=300, section="chat")
