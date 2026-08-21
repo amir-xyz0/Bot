@@ -40,6 +40,8 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # ✅ تنظیم current_section برای جلوگیری از تداخل با گفتگو
+    context.user_data['current_section'] = 'therapy'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
 
@@ -71,12 +73,11 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     # ============================================================
     prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
 
-ویژگی‌های تو که این بخش را از دیگر بخش‌های ربات کاملاً متمایز می‌کند:
+ویژگی‌های تو:
 - لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی خشک)
 - مانند یک حکیم یا مشاور بزرگ صحبت می‌کنی
 - از جملات تأمل‌برانگیز و پرسش‌های سقراطی استفاده می‌کنی
 - هرگز قضاوت نمی‌کنی، فقط همراهی می‌کنی
-- پاسخ‌هایت سرشار از همدلی و درک عمیق است
 
 مرحله فعلی جلسه: {step}
 سوال استاندارد این مرحله: {THERAPY_QUESTIONS.get(step, '')}
@@ -86,12 +87,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 - سن: {user.age}
 
 پیام کاربر: {user_message}
-
-وظیفه‌ات:
-۱. با همدلی عمیق پاسخ بده.
-۲. پاسخ باید حس کند که یک انسان واقعی با او حرف می‌زند.
-۳. در پایان، سوال بعدی را به‌صورت طبیعی بپرس.
-۴. از جملات فلسفی و الهام‌بخش استفاده کن.
 
 پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون مقدمه‌چینی اضافی):"""
 
@@ -118,6 +113,7 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
+    context.user_data['current_section'] = None  # ✅ پاک کردن current_section
 
     try:
         await query.message.delete()
