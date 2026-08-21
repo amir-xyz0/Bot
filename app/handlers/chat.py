@@ -19,6 +19,7 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
+    # ✅ فقط در صورتی که کاربر در بخش گفتگو باشد
     if context.user_data.get('current_section') != 'chat':
         await update.message.reply_text("💡 از منو، بخش «گفتگو با همراه» را انتخاب کنید.")
         return
@@ -26,9 +27,6 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
 
-    # ============================================================
-    # پرامپت اختصاصی گفتگو – با لحن انتخابی کاربر
-    # ============================================================
     style_map = {
         "friendly": "دوستانه، گرم و صمیمی",
         "formal": "رسمی، محترمانه و حرفه‌ای",
@@ -42,7 +40,6 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ویژگی‌های تو:
 - لحن: {style_text}
 - پاسخ‌هایت مختصر، مفید و دلنشین است
-- با کاربر همدلی می‌کنی و پاسخ‌هایت گرم است
 
 کاربر: {user_message}
 
