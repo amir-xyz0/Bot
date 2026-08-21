@@ -32,11 +32,10 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ===== ساخت اپلیکیشن =====
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
 # ============================================================
-# ۱. CommandHandlerها
+# CommandHandlerها
 # ============================================================
 app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CommandHandler("menu", menu.main_menu))
@@ -44,7 +43,7 @@ app.add_handler(CommandHandler("history", history.show_history))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
 # ============================================================
-# ۲. ConversationHandler ثبت‌نام
+# ConversationHandler ثبت‌نام
 # ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
@@ -60,7 +59,7 @@ conv_handler = ConversationHandler(
 app.add_handler(conv_handler)
 
 # ============================================================
-# ۳. CallbackQueryHandlerها
+# CallbackQueryHandlerها
 # ============================================================
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
@@ -94,30 +93,31 @@ app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# ۴. MessageHandlerهای تخصصی (اولویت اول - جلوتر از گفتگو)
+# MessageHandlerها (به ترتیب)
 # ============================================================
+# ۱. گفتگو (اول)
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+
+# ۲. خود گذشته (دوم)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
+
+# ۳. درمانگر (سوم)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ============================================================
-# ۵. MessageHandler عمومی گفتگو (آخرین اولویت)
-# ============================================================
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
-
-# ============================================================
-# ۶. Error Handler
+# Error Handler
 # ============================================================
 app.add_error_handler(error_handler)
 
 # ============================================================
-# ۷. دیتابیس و Scheduler
+# دیتابیس و Scheduler
 # ============================================================
 Base.metadata.create_all(engine)
 start_scheduler()
 
 # ============================================================
-# ۸. اجرا با Webhook
+# اجرا با Webhook
 # ============================================================
 if __name__ == "__main__":
     import requests
@@ -140,4 +140,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-    )
+)
