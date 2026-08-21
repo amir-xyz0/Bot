@@ -26,6 +26,9 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
 
+    # ============================================================
+    # پرامپت اختصاصی گفتگو – با لحن انتخابی کاربر
+    # ============================================================
     style_map = {
         "friendly": "دوستانه، گرم و صمیمی",
         "formal": "رسمی، محترمانه و حرفه‌ای",
@@ -39,6 +42,7 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ویژگی‌های تو:
 - لحن: {style_text}
 - پاسخ‌هایت مختصر، مفید و دلنشین است
+- با کاربر همدلی می‌کنی و پاسخ‌هایت گرم است
 
 کاربر: {user_message}
 
