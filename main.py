@@ -117,6 +117,7 @@ app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy
 # ============================================================
 # ۹. MessageHandlerهای تخصصی (با اولویت بالاتر)
 # ============================================================
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
@@ -124,7 +125,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_w
 # ============================================================
 # ۱۰. گفتگو با دستیار (آخرین اولویت - عمومی)
 # ============================================================
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+
 
 # ============================================================
 # ۱۱. Error Handler
