@@ -115,13 +115,10 @@ app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# ۹. MessageHandlerهای تخصصی (با اولویت بالاتر - قبل از گفتگوی عمومی)
+# ۹. MessageHandlerهای تخصصی (با اولویت بالاتر)
 # ============================================================
-# دریافت پاسخ مصاحبه خود گذشته (فقط در حالت مصاحبه)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
-# گفتگوی آزاد با خود گذشته (فقط در حالت گفتگوی آزاد)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
-# مکالمه با درمانگر (فقط در حالت درمانگر)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ============================================================
