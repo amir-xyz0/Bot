@@ -24,9 +24,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ============================================================
-# Error Handler
-# ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -35,9 +32,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ============================================================
-# ساخت اپلیکیشن
-# ============================================================
+# ===== ساخت اپلیکیشن =====
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
 # ============================================================
@@ -67,7 +62,6 @@ app.add_handler(conv_handler)
 # ============================================================
 # ۳. CallbackQueryHandlerها
 # ============================================================
-# منو
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
 app.add_handler(CallbackQueryHandler(menu.predict_menu, pattern="predict_menu"))
@@ -76,7 +70,6 @@ app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
-# ویرایش پروفایل
 app.add_handler(CallbackQueryHandler(profile_edit.edit_name, pattern="edit_name"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_gender, pattern="edit_gender"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_gender, pattern="set_gender_"))
@@ -85,14 +78,11 @@ app.add_handler(CallbackQueryHandler(profile_edit.edit_style, pattern="edit_styl
 app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
 
-# تاریخچه احساسات
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 
-# پیش‌بینی
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
-# خود گذشته
 app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
 app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
 app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
@@ -101,18 +91,17 @@ app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="pas
 app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
 app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
 
-# درمانگر
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# ۴. MessageHandlerهای تخصصی (اولویت اول)
+# ۴. MessageHandlerهای تخصصی (اولویت اول - جلوتر از گفتگو)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ============================================================
-# ۵. MessageHandler عمومی (آخرین اولویت)
+# ۵. MessageHandler عمومی گفتگو (آخرین اولویت)
 # ============================================================
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
