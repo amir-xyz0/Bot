@@ -88,6 +88,11 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 پیام کاربر: {user_message}
 
+وظیفه‌ات:
+۱. با همدلی عمیق پاسخ بده.
+۲. پاسخ باید حس کند که یک انسان واقعی با او حرف می‌زند.
+۳. در پایان، سوال بعدی را به‌صورت طبیعی بپرس.
+۴. از جملات فلسفی و الهام‌بخش استفاده کن.
 پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون مقدمه‌چینی اضافی):"""
 
     result = call_openrouter(prompt, temperature=0.75, max_tokens=500, section="therapist")
