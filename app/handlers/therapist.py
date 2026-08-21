@@ -40,7 +40,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ✅ تنظیم حالت درمانگر (بدون نیاز به current_section)
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
 
@@ -54,7 +53,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     user_message = update.message.text
 
-    # ✅ فقط چک کردن حالت درمانگر، نه current_section
     if not context.user_data.get('therapy_mode'):
         return
 
@@ -69,11 +67,11 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     step = context.user_data.get('therapy_step', 'start')
 
     # ============================================================
-    # پرامپت اختصاصی درمانگر – کاملاً مستقل از chat_style کاربر
+    # پرامپت اختصاصی درمانگر – کاملاً مستقل از chat_style
     # ============================================================
     prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
 
-ویژگی‌های تو:
+ویژگی‌های تو که این بخش را از دیگر بخش‌های ربات کاملاً متمایز می‌کند:
 - لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی خشک)
 - مانند یک حکیم یا مشاور بزرگ صحبت می‌کنی
 - از جملات تأمل‌برانگیز و پرسش‌های سقراطی استفاده می‌کنی
@@ -112,8 +110,7 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
     else:
         await update.message.reply_text(
-            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. بیا از اول شروع کنیم.\n"
-            f"{THERAPY_QUESTIONS['start']}"
+            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم."
         )
 
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -130,7 +127,6 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
-        "از اینکه اجازه دادی کنارت باشم سپاسگزارم.\n"
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
