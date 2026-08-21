@@ -542,4 +542,4 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم.",
             reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    )
