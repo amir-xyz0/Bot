@@ -89,7 +89,6 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ✅ تنظیم current_section برای جلوگیری از تداخل با گفتگو
     context.user_data['current_section'] = 'past_self'
-    logger.info(f"🕰️ start_past_self: user_id={user_id}, current_section='past_self'")
 
     try:
         past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else None
@@ -206,7 +205,6 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
     context.user_data['current_section'] = None  # ✅ پاک کردن current_section
-    logger.info(f"🕰️ finish_interview: current_section پاک شد")
 
     text = (
         "✅ **مصاحبه با گذشته کامل شد!**\n\n"
@@ -351,7 +349,6 @@ async def end_interview_early(update: Update, context: ContextTypes.DEFAULT_TYPE
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
     context.user_data['current_section'] = None  # ✅ پاک کردن current_section
-    logger.info(f"🕰️ end_interview_early: current_section پاک شد")
 
     try:
         await query.message.delete()
@@ -394,7 +391,6 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_section'] = 'past_self'
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_free_chat'] = True
-    logger.info(f"🕰️ free_chat: user_id={user_id}, current_section='past_self'")
 
     past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else []
     db.close()
@@ -439,7 +435,6 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_free_chat'] = False
     context.user_data['current_section'] = None  # ✅ پاک کردن current_section
-    logger.info(f"🕰️ end_free_chat: current_section پاک شد")
 
     try:
         await query.message.delete()
@@ -458,10 +453,6 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش مکالمه با نسخه‌ی گذشته خود (کاملاً مستقل از chat_style)"""
-    logger.info(f"🕰️ chat_with_past_self: user_id={update.effective_user.id}, "
-                f"past_self_mode={context.user_data.get('past_self_mode')}, "
-                f"past_self_free_chat={context.user_data.get('past_self_free_chat')}")
-
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
         return
 
@@ -551,4 +542,4 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم.",
             reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    )
