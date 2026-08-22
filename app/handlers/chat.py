@@ -19,10 +19,10 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
-    # ✅ فقط در صورتی که کاربر در بخش گفتگو باشد
+    # ✅ فقط در بخش گفتگو اجرا شود (اگر not chat، فقط return کن)
     if context.user_data.get('current_section') != 'chat':
-        await update.message.reply_text("💡 از منو، بخش «گفتگو با همراه» را انتخاب کنید.")
-        return
+        logger.info(f"⏭️ chat_with_ai: عبور (current_section={context.user_data.get('current_section')})")
+        return  # ❌ اینجا فقط return می‌کنیم، هیچ پیامی نمی‌فرستیم
 
     user_message = update.message.text
     loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
