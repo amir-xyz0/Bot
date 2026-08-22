@@ -18,16 +18,12 @@ from app.handlers import (
 from app.database import Base, engine
 from app.scheduler import start_scheduler
 
-# تنظیم لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# ============================================================
-# Error Handler (مدیریت خطاهای ثبت‌نشده)
-# ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -36,19 +32,12 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ============================================================
-# ساخت اپلیکیشن
-# ============================================================
 app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
-# ============================================================
-# ۱. استارت
-# ============================================================
+# ===== 1. استارت =====
 app.add_handler(CommandHandler("start", start.start))
 
-# ============================================================
-# ۲. ثبت‌نام (پروفایل) - با ConversationHandler
-# ============================================================
+# ===== 2. ثبت‌نام =====
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
     states={
@@ -62,9 +51,7 @@ conv_handler = ConversationHandler(
 )
 app.add_handler(conv_handler)
 
-# ============================================================
-# ۳. منو (با دکمه‌های دو ستونه)
-# ============================================================
+# ===== 3. منو =====
 app.add_handler(CommandHandler("menu", menu.main_menu))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
@@ -74,9 +61,7 @@ app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
-# ============================================================
-# ۴. ویرایش پروفایل
-# ============================================================
+# ===== 4. ویرایش پروفایل =====
 app.add_handler(CallbackQueryHandler(profile_edit.edit_name, pattern="edit_name"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_gender, pattern="edit_gender"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_gender, pattern="set_gender_"))
@@ -86,21 +71,15 @@ app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
-# ============================================================
-# ۵. تاریخچه احساسات
-# ============================================================
+# ===== 5. تاریخچه احساسات =====
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
 app.add_handler(CommandHandler("history", history.show_history))
 
-# ============================================================
-# ۶. پیش‌بینی روز
-# ============================================================
+# ===== 6. پیش‌بینی =====
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
-# ============================================================
-# ۷. خود گذشته (آیینه‌ی گذشته)
-# ============================================================
+# ===== 7. خود گذشته =====
 app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
 app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
 app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
@@ -109,60 +88,35 @@ app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="pas
 app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
 app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
 
-# ============================================================
-# ۸. درمانگر شناختی
-# ============================================================
+# ===== 8. درمانگر =====
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
-# ============================================================
-# ۹. MessageHandlerهای تخصصی (با اولویت بالاتر)
-# ============================================================
+# ===== 9. گفتگو با دستیار (فقط همین یک MessageHandler) =====
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
-# ============================================================
-# ۱۰. گفتگو با دستیار (آخرین اولویت - عمومی)
-# ============================================================
-
-
-# ============================================================
-# ۱۱. Error Handler
-# ============================================================
+# ===== Error Handler =====
 app.add_error_handler(error_handler)
 
-# ============================================================
-# ۱۲. ایجاد جداول دیتابیس
-# ============================================================
+# ===== دیتابیس و Scheduler =====
 Base.metadata.create_all(engine)
-
-# ============================================================
-# ۱۳. راه‌اندازی Scheduler (اعلان‌های خودکار)
-# ============================================================
 start_scheduler()
 
-# ============================================================
-# ۱۴. اجرا با Webhook
-# ============================================================
+# ===== اجرا با Webhook =====
 if __name__ == "__main__":
     import requests
-    
     port = int(os.environ.get("PORT", 10000))
     hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
     webhook_url = f"https://{hostname}/{config.BOT_TOKEN}"
-    
-    # حذف Webhook قبلی برای جلوگیری از Conflict
+
     try:
         resp = requests.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook")
         logger.info(f"✅ Webhook deleted: {resp.json()}")
     except Exception as e:
         logger.warning(f"⚠️ Could not delete webhook: {e}")
-    
+
     logger.info(f"🚀 ربات با Webhook روی پورت {port} راه‌اندازی شد!")
     logger.info(f"🔗 Webhook URL: {webhook_url}")
-    
-    # اجرای اصلی با Webhook
+
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
