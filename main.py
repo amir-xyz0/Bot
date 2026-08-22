@@ -97,7 +97,7 @@ app.add_handler(CommandHandler("history", history.show_history))
 # ۶. پیش‌بینی روز
 # ============================================================
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+
 # ============================================================
 # ۷. خود گذشته (آیینه‌ی گذشته)
 # ============================================================
@@ -117,6 +117,7 @@ app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy
 # ============================================================
 # ۹. MessageHandlerهای تخصصی (با اولویت بالاتر)
 # ============================================================
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
