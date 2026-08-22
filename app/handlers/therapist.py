@@ -55,6 +55,7 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     user_message = update.message.text
 
+    # فقط در صورتی که کاربر در حالت درمانگر باشد
     if not context.user_data.get('therapy_mode'):
         return
 
@@ -124,4 +125,3 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-    
