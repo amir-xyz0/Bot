@@ -96,12 +96,14 @@ app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy
 # MessageHandlerها (ترتیب صحیح)
 # ============================================================
 # ۱. هندلرهای تخصصی (درمانگر و خود گذشته) - اولویت اول
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ۲. هندلر عمومی گفتگو - آخرین اولویت
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+
 
 # ============================================================
 # Error Handler
