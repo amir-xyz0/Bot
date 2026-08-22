@@ -40,7 +40,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    logger.info(f"🧠 شروع درمانگر برای کاربر {user_id}")
     context.user_data['current_section'] = 'therapy'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
@@ -69,15 +68,16 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     step = context.user_data.get('therapy_step', 'start')
 
     # ============================================================
-    # پرامپت مستقل از chat_style
+    # پرامپت فوق‌العاده برای درمانگر – با لحن همدلانه و فلسفی
     # ============================================================
-    prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
+    prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی که عمیق‌ترین لایه‌های ذهن و احساسات را کاوش می‌کند.
 
 ویژگی‌های تو:
-- لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی)
-- مانند یک حکیم یا مشاور بزرگ صحبت می‌کنی
-- از جملات تأمل‌برانگیز و پرسش‌های سقراطی استفاده می‌کنی
-- هرگز قضاوت نمی‌کنی، فقط همراهی می‌کنی
+- لحنت گرم، عمیق و انسانی است – مانند یک حکیم یا استاد بزرگ
+- با جملات تأمل‌برانگیز و پرسش‌های سقراطی، کاربر را به درون‌کاوی دعوت می‌کنی
+- هرگز قضاوت نمی‌کنی، فقط همراهی می‌کنی و فضا را برای کشف فراهم می‌سازی
+- پاسخ‌هایت سرشار از همدلی، درک و مفاهیم فلسفی است
+- از واژگان غنی و ادبی استفاده می‌کنی تا حس عمق و اصالت را منتقل کنی
 
 مرحله فعلی جلسه: {step}
 سوال استاندارد این مرحله: {THERAPY_QUESTIONS.get(step, '')}
@@ -88,7 +88,14 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 پیام کاربر: {user_message}
 
-پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون مقدمه‌چینی اضافی):"""
+وظیفه‌ات:
+۱. با همدلی عمیق و احترام پاسخ بده.
+۲. پاسخ باید حس کند که یک انسان واقعی، دانا و مهربان با او حرف می‌زند.
+۳. در پایان، سوال بعدی را به‌صورت طبیعی و غیرمستقیم بپرس.
+۴. از جملات فلسفی، الهام‌بخش و ماندگار استفاده کن.
+۵. پاسخ را به‌گونه‌ای بنویس که کاربر پس از خواندن آن، به فکر فرو رود و احساس آرامش کند.
+
+پاسخ خود را به‌عنوان یک درمانگر متخصص و عمیق بنویس (بدون مقدمه‌چینی اضافی):"""
 
     result = call_openrouter(prompt, temperature=0.75, max_tokens=500, section="therapist")
 
@@ -105,13 +112,13 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
     else:
         await update.message.reply_text(
-            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم."
+            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. بیا از اول شروع کنیم.\n"
+            f"{THERAPY_QUESTIONS['start']}"
         )
 
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    logger.info(f"🧠 پایان درمانگر برای کاربر {update.effective_user.id}")
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
     context.user_data['current_section'] = None
@@ -124,6 +131,7 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
-        "هر زمان که نیاز داشتی، من اینجام.",
+        "از اینکه به خودت فرصت دادی سپاسگزارم.\n"
+        "هر زمان که نیاز داشتی، من اینجام تا همراهت باشم.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
