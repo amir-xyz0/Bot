@@ -15,9 +15,6 @@ THERAPY_QUESTIONS = {
     "action": "امروز چیکار می‌تونی بکنی که این فکر رو کمتر کنی؟"
 }
 
-# ============================================================
-# ۱. شروع جلسه درمانگری
-# ============================================================
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     query = update.callback_query
@@ -44,7 +41,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     logger.info(f"🧠 شروع درمانگر برای کاربر {user_id}")
-    # ✅ تنظیم current_section برای جلوگیری از تداخل با گفتگو
     context.user_data['current_section'] = 'therapy'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
@@ -55,9 +51,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ============================================================
-# ۲. پردازش مکالمه با درمانگر (کاملاً مستقل از chat_style)
-# ============================================================
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_message = update.message.text
@@ -75,9 +68,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     step = context.user_data.get('therapy_step', 'start')
 
-    # ============================================================
-    # پرامپت مستقل از chat_style – با لحن فلسفی و همدلانه
-    # ============================================================
     prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
 
 ویژگی‌های تو:
@@ -115,16 +105,13 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم."
         )
 
-# ============================================================
-# ۳. پایان جلسه درمانگری
-# ============================================================
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     logger.info(f"🧠 پایان درمانگر برای کاربر {update.effective_user.id}")
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
-    context.user_data['current_section'] = None  # ✅ پاک کردن current_section
+    context.user_data['current_section'] = None
 
     try:
         await query.message.delete()
@@ -137,3 +124,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+    
