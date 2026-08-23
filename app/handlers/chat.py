@@ -9,19 +9,19 @@ logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    logger.info(f"🔥 chat_with_ai: user_id={user_id}")
+    logger.info(f"📩 chat_with_ai: user_id={user_id}, current_section={context.user_data.get('current_section')}")
+    
+    # اگر کاربر در بخش تخصصی است، هیچ کاری نکن
+    if context.user_data.get('current_section') not in [None, 'chat']:
+        logger.info(f"⏭️ chat_with_ai: عبور (current_section={context.user_data.get('current_section')})")
+        return
 
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
     db.close()
-
+    
     if not user:
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
-        return
-
-    # اگر کاربر در بخش تخصصی است، هیچ کاری نکن (هندلر تخصصی کار خواهد کرد)
-    if context.user_data.get('current_section') not in ['chat', None]:
-        logger.info(f"⏭️ chat_with_ai: عبور (current_section={context.user_data.get('current_section')})")
         return
 
     user_message = update.message.text
@@ -36,13 +36,11 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     style_text = style_map.get(user.chat_style, "دوستانه و گرم")
 
     prompt = f"""تو یک همراه هوشمند و صمیمی هستی که با کاربری گفتگو می‌کند.
-
 ویژگی‌های تو:
 - لحن: {style_text}
 - پاسخ‌هایت مختصر، مفید و دلنشین است
 
 کاربر: {user_message}
-
 پاسخ خود را با لحن {style_text} بنویس:"""
 
     result = call_openrouter(prompt, temperature=0.85, max_tokens=300, section="chat")
