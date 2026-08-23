@@ -87,7 +87,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
         return
 
-    # 🔥 تنظیم current_section برای جلوگیری از تداخل با گفتگوی عمومی
+    # تنظیم current_section
     context.user_data['current_section'] = 'past_self'
     logger.info(f"🕰️ start_past_self: user_id={user_id}, current_section=past_self")
 
@@ -158,9 +158,13 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # ============================================================
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """دریافت پاسخ کاربر – فقط در حالت مصاحبه (نه گفتگوی آزاد)"""
-    # فقط اگر کاربر در بخش خودگذشته باشد
-    #if context.user_data.get('current_section') != 'past_self':
-        #return
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        return
+    
+    # موقتاً کامنت شده:
+    # if context.user_data.get('current_section') != 'past_self':
+    #     return
     
     if not context.user_data.get('past_self_mode'):
         return
@@ -214,7 +218,7 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-    # 🔥 پاک کردن current_section هنگام خروج از مصاحبه
+    # پاک کردن current_section هنگام خروج از مصاحبه
     context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
@@ -343,7 +347,7 @@ async def new_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-    # 🔥 تنظیم current_section برای ورود به مصاحبه جدید
+    # تنظیم current_section برای ورود به مصاحبه جدید
     context.user_data['current_section'] = 'past_self'
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_step'] = 0
@@ -367,7 +371,7 @@ async def end_interview_early(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     await query.answer()
     
-    # 🔥 پاک کردن current_section
+    # پاک کردن current_section
     context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
@@ -411,7 +415,7 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
         return
 
-    # 🔥 تنظیم current_section برای گفتگوی آزاد
+    # تنظیم current_section برای گفتگوی آزاد
     context.user_data['current_section'] = 'past_self'
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_free_chat'] = True
@@ -459,7 +463,7 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # 🔥 پاک کردن current_section
+    # پاک کردن current_section
     context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_free_chat'] = False
@@ -483,10 +487,14 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش مکالمه با نسخه‌ی گذشته خود (کاملاً مستقل از chat_style)"""
-    # فقط اگر کاربر در بخش خودگذشته باشد
-    #if context.user_data.get('current_section') != 'past_self':
-        #logger.info(f"⏭️ chat_with_past_self: عبور (current_section={context.user_data.get('current_section')})")
-        #return
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        return
+    
+    # موقتاً کامنت شده:
+    # if context.user_data.get('current_section') != 'past_self':
+    #     logger.info(f"⏭️ chat_with_past_self: عبور (current_section={context.user_data.get('current_section')})")
+    #     return
 
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
         return
@@ -578,4 +586,4 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم.",
             reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+        )
