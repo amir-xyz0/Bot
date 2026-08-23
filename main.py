@@ -13,7 +13,7 @@ from telegram.ext import (
 from app.config import config
 from app.handlers import (
     start, profile, menu, chat, history, profile_edit,
-    predictor, past_self, therapist, test  # test رو اضافه کن
+    predictor, past_self, therapist
 )
 from app.database import Base, engine
 from app.scheduler import start_scheduler
@@ -45,18 +45,6 @@ app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 # ============================================================
 # ConversationHandler ثبت‌نام - کاملاً حذف شده
 # ============================================================
-# conv_handler = ConversationHandler(
-#     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
-#     states={
-#         profile.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_name)],
-#         profile.GENDER: [CallbackQueryHandler(profile.get_gender)],
-#         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
-#         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
-#     },
-#     fallbacks=[CommandHandler("start", start.start)],
-#     per_message=False
-# )
-# app.add_handler(conv_handler)
 
 # ============================================================
 # CallbackQueryHandlerها
@@ -96,9 +84,6 @@ app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy
 # ============================================================
 # MessageHandlerها - ترتیب = اولویت (حیاتی)
 # ============================================================
-
-# ۰. تست - اول از همه (با filters.ALL)
-app.add_handler(MessageHandler(filters.ALL, test.test_handler))
 
 # ۱. خود گذشته (دریافت پاسخ مصاحبه)
 app.add_handler(MessageHandler(
