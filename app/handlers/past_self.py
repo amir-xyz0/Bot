@@ -159,8 +159,8 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """دریافت پاسخ کاربر – فقط در حالت مصاحبه (نه گفتگوی آزاد)"""
     # فقط اگر کاربر در بخش خودگذشته باشد
-    if context.user_data.get('current_section') != 'past_self':
-        return
+    #if context.user_data.get('current_section') != 'past_self':
+        #return
     
     if not context.user_data.get('past_self_mode'):
         return
@@ -484,9 +484,9 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش مکالمه با نسخه‌ی گذشته خود (کاملاً مستقل از chat_style)"""
     # فقط اگر کاربر در بخش خودگذشته باشد
-    if context.user_data.get('current_section') != 'past_self':
-        logger.info(f"⏭️ chat_with_past_self: عبور (current_section={context.user_data.get('current_section')})")
-        return
+    #if context.user_data.get('current_section') != 'past_self':
+        #logger.info(f"⏭️ chat_with_past_self: عبور (current_section={context.user_data.get('current_section')})")
+        #return
 
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
         return
