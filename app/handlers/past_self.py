@@ -459,6 +459,10 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================================
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش مکالمه با نسخه‌ی گذشته خود (کاملاً مستقل از chat_style)"""
+    # فقط اگر کاربر در بخش خودگذشته باشد
+    if context.user_data.get('current_section') != 'past_self':
+        return
+
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
         return
 
