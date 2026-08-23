@@ -13,7 +13,7 @@ from telegram.ext import (
 from app.config import config
 from app.handlers import (
     start, profile, menu, chat, history, profile_edit,
-    predictor, past_self, therapist
+    predictor, past_self, therapist, test  # test رو اضافه کن
 )
 from app.database import Base, engine
 from app.scheduler import start_scheduler
@@ -43,9 +43,20 @@ app.add_handler(CommandHandler("history", history.show_history))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
 # ============================================================
-# ConversationHandler ثبت‌نام
+# ConversationHandler ثبت‌نام - کاملاً حذف شده
 # ============================================================
-
+# conv_handler = ConversationHandler(
+#     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
+#     states={
+#         profile.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_name)],
+#         profile.GENDER: [CallbackQueryHandler(profile.get_gender)],
+#         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
+#         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
+#     },
+#     fallbacks=[CommandHandler("start", start.start)],
+#     per_message=False
+# )
+# app.add_handler(conv_handler)
 
 # ============================================================
 # CallbackQueryHandlerها
@@ -53,8 +64,6 @@ app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
 app.add_handler(CallbackQueryHandler(menu.predict_menu, pattern="predict_menu"))
-#app.add_handler(CallbackQueryHandler(menu.past_self_menu, pattern="past_self_menu"))
-#app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
@@ -88,6 +97,9 @@ app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy
 # MessageHandlerها - ترتیب = اولویت (حیاتی)
 # ============================================================
 
+# ۰. تست - اول از همه (با filters.ALL)
+app.add_handler(MessageHandler(filters.ALL, test.test_handler))
+
 # ۱. خود گذشته (دریافت پاسخ مصاحبه)
 app.add_handler(MessageHandler(
     filters.TEXT & ~filters.COMMAND,
@@ -106,7 +118,7 @@ app.add_handler(MessageHandler(
     therapist.chat_with_therapist
 ))
 
-# ۴. گفتگوی عمومی (آخرین اولویت - فقط وقتی هیچ بخش تخصصی فعال نیست)
+# ۴. گفتگوی عمومی (آخرین اولویت)
 app.add_handler(MessageHandler(
     filters.TEXT & ~filters.COMMAND,
     chat.chat_with_ai
