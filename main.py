@@ -82,29 +82,46 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
-# خود گذشته
+# خود گذشته - ورود
 app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
 app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
 app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
 app.add_handler(CallbackQueryHandler(past_self.new_interview, pattern="past_self_new_interview"))
 app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="past_self_end_interview"))
-# حذف هندلرهای free_chat و end_free_chat (دیگر نیازی نیست)
+app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
+app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
 
-# درمانگر
+# درمانگر - ورود و خروج
+app.add_handler(CallbackQueryHandler(therapist.start_therapy, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# MessageHandlerها (ترتیب درست)
+# MessageHandlerها - ترتیب = اولویت (حیاتی)
 # ============================================================
-# ۱. خود گذشته (دریافت پاسخ مصاحبه و گفتگو)
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
 
-# ۲. درمانگر
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
+# ۱. خود گذشته (دریافت پاسخ مصاحبه)
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    past_self.receive_answer
+))
 
-# ۳. گفتگو (عمومی) – آخرین اولویت
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+# ۲. خود گذشته (گفتگوی آزاد)
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    past_self.chat_with_past_self
+))
+
+# ۳. درمانگر
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    therapist.chat_with_therapist
+))
+
+# ۴. گفتگوی عمومی (آخرین اولویت - فقط وقتی هیچ بخش تخصصی فعال نیست)
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    chat.chat_with_ai
+))
 
 # ============================================================
 # Error Handler
