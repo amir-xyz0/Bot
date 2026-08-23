@@ -98,7 +98,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("📋 دیدن پاسخ‌های قبلی", callback_data="past_self_show_answers")],
             [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
-            [InlineKeyboardButton("💬 گفتگوی آزاد با گذشته", callback_data="past_self_free_chat")],
+            
             [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
         ]
         await message.reply_text(
@@ -214,7 +214,6 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [InlineKeyboardButton("📋 دیدن پاسخ‌ها", callback_data="past_self_show_answers")],
-        [InlineKeyboardButton("💬 گفتگوی آزاد با گذشته", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
 
@@ -264,7 +263,6 @@ async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
             break
 
     keyboard = [
-        [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
         [InlineKeyboardButton("🗑️ پاک کردن پاسخ‌ها", callback_data="past_self_delete_answers")],
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
