@@ -52,6 +52,10 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # فقط اگر کاربر در بخش درمانگر باشد
+    if context.user_data.get('current_section') != 'therapist':
+        return
+
     user_id = update.effective_user.id
     user_message = update.message.text
 
