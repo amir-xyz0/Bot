@@ -40,6 +40,8 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # 🔥 تنظیم current_section برای جلوگیری از تداخل با گفتگوی عمومی
+    context.user_data['current_section'] = 'therapist'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
 
@@ -116,6 +118,9 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # 🔥 پاک کردن current_section هنگام خروج
+    context.user_data['current_section'] = None
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
 
