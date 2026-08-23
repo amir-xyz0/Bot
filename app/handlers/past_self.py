@@ -87,6 +87,9 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
         return
 
+    # 🔥 تنظیم current_section برای جلوگیری از تداخل با گفتگوی عمومی
+    context.user_data['current_section'] = 'past_self'
+
     # بررسی وجود پاسخ‌های قبلی
     try:
         past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else None
@@ -200,6 +203,8 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
+    # 🔥 پاک کردن current_section هنگام خروج از مصاحبه
+    context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
 
@@ -323,6 +328,8 @@ async def new_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
+    # 🔥 تنظیم current_section برای ورود به مصاحبه جدید
+    context.user_data['current_section'] = 'past_self'
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_step'] = 0
     context.user_data['past_self_answers'] = []
@@ -341,6 +348,9 @@ async def end_interview_early(update: Update, context: ContextTypes.DEFAULT_TYPE
     """پایان زودهنگام مصاحبه بدون ذخیره"""
     query = update.callback_query
     await query.answer()
+    
+    # 🔥 پاک کردن current_section
+    context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
 
@@ -381,6 +391,8 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
         return
 
+    # 🔥 تنظیم current_section برای گفتگوی آزاد
+    context.user_data['current_section'] = 'past_self'
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_free_chat'] = True
 
@@ -424,6 +436,9 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پایان گفتگوی آزاد با گذشته"""
     query = update.callback_query
     await query.answer()
+    
+    # 🔥 پاک کردن current_section
+    context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_free_chat'] = False
 
@@ -533,4 +548,4 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم.",
             reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+        )
