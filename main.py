@@ -45,18 +45,7 @@ app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 # ============================================================
 # ConversationHandler ثبت‌نام
 # ============================================================
-conv_handler = ConversationHandler(
-    entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
-    states={
-        profile.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_name)],
-        profile.GENDER: [CallbackQueryHandler(profile.get_gender)],
-        profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
-        profile.STYLE: [CallbackQueryHandler(profile.get_style)]
-    },
-    fallbacks=[CommandHandler("start", start.start)],
-    per_message=False
-)
-app.add_handler(conv_handler)
+
 
 # ============================================================
 # CallbackQueryHandlerها
