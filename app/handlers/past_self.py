@@ -89,6 +89,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 🔥 تنظیم current_section برای جلوگیری از تداخل با گفتگوی عمومی
     context.user_data['current_section'] = 'past_self'
+    logger.info(f"🕰️ start_past_self: user_id={user_id}, current_section=past_self")
 
     # بررسی وجود پاسخ‌های قبلی
     try:
@@ -101,7 +102,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("📋 دیدن پاسخ‌های قبلی", callback_data="past_self_show_answers")],
             [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
-            
+            [InlineKeyboardButton("💬 گفتگوی آزاد با گذشته", callback_data="past_self_free_chat")],
             [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
         ]
         await message.reply_text(
@@ -156,12 +157,22 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # ۳. دریافت پاسخ کاربر (فقط در حالت مصاحبه)
 # ============================================================
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """دریافت پاسخ کاربر – فقط در حالت مصاحبه"""
+    """دریافت پاسخ کاربر – فقط در حالت مصاحبه (نه گفتگوی آزاد)"""
+    # فقط اگر کاربر در بخش خودگذشته باشد
+    if context.user_data.get('current_section') != 'past_self':
+        return
+    
     if not context.user_data.get('past_self_mode'):
+        return
+    
+    # اگر گفتگوی آزاد فعاله، کاری نکن تا هندلر بعدی اجرا بشه
+    if context.user_data.get('past_self_free_chat'):
         return
 
     user_message = update.message.text
     step = context.user_data.get('past_self_step', 0)
+    user_id = update.effective_user.id
+    logger.info(f"📩 receive_answer: user_id={user_id}, step={step}")
 
     if step >= len(PAST_QUESTIONS):
         await finish_interview(update, context)
@@ -208,6 +219,8 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
 
+    logger.info(f"🕰️ finish_interview: current_section پاک شد")
+
     text = (
         "✅ **مصاحبه با گذشته کامل شد!**\n\n"
         f"شما به {len(answers)} سوال درباره‌ی گذشته‌تان پاسخ دادید.\n\n"
@@ -219,6 +232,7 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [InlineKeyboardButton("📋 دیدن پاسخ‌ها", callback_data="past_self_show_answers")],
+        [InlineKeyboardButton("💬 گفتگوی آزاد با گذشته", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
 
@@ -270,6 +284,7 @@ async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
         [InlineKeyboardButton("🗑️ پاک کردن پاسخ‌ها", callback_data="past_self_delete_answers")],
+        [InlineKeyboardButton("💬 گفتگوی آزاد با گذشته", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
 
@@ -333,6 +348,9 @@ async def new_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_step'] = 0
     context.user_data['past_self_answers'] = []
+    context.user_data['past_self_free_chat'] = False
+
+    logger.info(f"🕰️ new_interview: user_id={user_id}, current_section=past_self")
 
     try:
         await query.message.delete()
@@ -353,6 +371,8 @@ async def end_interview_early(update: Update, context: ContextTypes.DEFAULT_TYPE
     context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
+
+    logger.info(f"🕰️ end_interview_early: current_section پاک شد")
 
     try:
         await query.message.delete()
@@ -395,6 +415,8 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_section'] = 'past_self'
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_free_chat'] = True
+
+    logger.info(f"💬 free_chat: user_id={user_id}, current_section=past_self, past_self_free_chat=True")
 
     past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else []
     db.close()
@@ -442,6 +464,8 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_free_chat'] = False
 
+    logger.info(f"💬 end_free_chat: current_section پاک شد")
+
     try:
         await query.message.delete()
     except:
@@ -461,6 +485,7 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
     """پردازش مکالمه با نسخه‌ی گذشته خود (کاملاً مستقل از chat_style)"""
     # فقط اگر کاربر در بخش خودگذشته باشد
     if context.user_data.get('current_section') != 'past_self':
+        logger.info(f"⏭️ chat_with_past_self: عبور (current_section={context.user_data.get('current_section')})")
         return
 
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
@@ -468,6 +493,7 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = update.effective_user.id
     user_message = update.message.text
+    logger.info(f"💬 chat_with_past_self: user_id={user_id}, message={user_message[:30]}...")
 
     db = SessionLocal()
     try:
@@ -552,4 +578,4 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم.",
             reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    )
