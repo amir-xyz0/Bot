@@ -40,7 +40,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 🔥 تنظیم current_section برای جلوگیری از تداخل با گفتگوی عمومی
+    # تنظیم current_section
     context.user_data['current_section'] = 'therapist'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
@@ -54,10 +54,14 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط اگر کاربر در بخش درمانگر باشد
-    #if context.user_data.get('current_section') != 'therapist':
-        #logger.info(f"⏭️ chat_with_therapist: عبور (current_section={context.user_data.get('current_section')})")
-        #return
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        return
+    
+    # موقتاً کامنت شده:
+    # if context.user_data.get('current_section') != 'therapist':
+    #     logger.info(f"⏭️ chat_with_therapist: عبور (current_section={context.user_data.get('current_section')})")
+    #     return
 
     if not context.user_data.get('therapy_mode'):
         return
@@ -127,7 +131,7 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # 🔥 پاک کردن current_section هنگام خروج
+    # پاک کردن current_section هنگام خروج
     context.user_data['current_section'] = None
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
@@ -144,4 +148,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+        )
