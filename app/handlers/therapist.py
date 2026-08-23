@@ -55,9 +55,9 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # فقط اگر کاربر در بخش درمانگر باشد
-    if context.user_data.get('current_section') != 'therapist':
-        logger.info(f"⏭️ chat_with_therapist: عبور (current_section={context.user_data.get('current_section')})")
-        return
+    #if context.user_data.get('current_section') != 'therapist':
+        #logger.info(f"⏭️ chat_with_therapist: عبور (current_section={context.user_data.get('current_section')})")
+        #return
 
     if not context.user_data.get('therapy_mode'):
         return
