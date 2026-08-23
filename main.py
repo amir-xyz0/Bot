@@ -96,6 +96,8 @@ app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy
 # ============================================================
 # MessageHandlerها (ترتیب درست)
 # ============================================================
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
+
 # ۱. خود گذشته (دریافت پاسخ مصاحبه و گفتگو)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.receive_answer))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_with_past_self))
@@ -104,7 +106,6 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, past_self.chat_w
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, therapist.chat_with_therapist))
 
 # ۳. گفتگو (عمومی) – آخرین اولویت
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_ai))
 
 # ============================================================
 # Error Handler
