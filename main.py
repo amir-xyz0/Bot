@@ -43,7 +43,7 @@ app.add_handler(CommandHandler("history", history.show_history))
 app.add_handler(CommandHandler("profile", profile_edit.show_profile))
 
 # ============================================================
-# ConversationHandler ثبت‌نام - کاملاً حذف شده
+# ConversationHandler ثبت‌نام - حذف شده
 # ============================================================
 
 # ============================================================
@@ -82,30 +82,30 @@ app.add_handler(CallbackQueryHandler(therapist.start_therapy, pattern="therapy_m
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# MessageHandlerها - ترتیب = اولویت (حیاتی)
+# MessageHandlerها - با filters.TEXT ساده (بدون ~filters.COMMAND)
 # ============================================================
 
 # ۱. خود گذشته (دریافت پاسخ مصاحبه)
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
+    filters.TEXT,
     past_self.receive_answer
 ))
 
 # ۲. خود گذشته (گفتگوی آزاد)
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
+    filters.TEXT,
     past_self.chat_with_past_self
 ))
 
 # ۳. درمانگر
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
+    filters.TEXT,
     therapist.chat_with_therapist
 ))
 
 # ۴. گفتگوی عمومی (آخرین اولویت)
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
+    filters.TEXT,
     chat.chat_with_ai
 ))
 
