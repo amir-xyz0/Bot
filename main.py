@@ -120,7 +120,7 @@ app.add_error_handler(error_handler)
 # دیتابیس و Scheduler
 # ============================================================
 # ⚠️ توجه: این کار تمام داده‌های موجود رو پاک می‌کنه!
-Base.metadata.drop_all(engine)   # حذف جدول‌های قدیمی
+#Base.metadata.drop_all(engine)   # حذف جدول‌های قدیمی
 Base.metadata.create_all(engine)  # ایجاد جدول‌های جدید با مدل به‌روز
 start_scheduler()
 
