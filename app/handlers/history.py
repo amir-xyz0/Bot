@@ -43,17 +43,33 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
+    # تشخیص اینکه از callback_query اومده یا message
+    query = update.callback_query
+    if query:
+        await query.answer()
+        message = query.message
+        is_callback = True
+    else:
+        message = update.message
+        is_callback = False
+    
+    if not message:
+        return
+    
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
         if not user or not user.mood_history or len(user.mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-            await update.message.reply_text(
+            text = (
                 "📭 **تاریخچه‌ای وجود ندارد.**\n\n"
                 "هنوز احساساتی ثبت نکردی.\n"
-                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی.",
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی."
             )
+            if is_callback:
+                await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+            else:
+                await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
             db.close()
             return
         
@@ -70,13 +86,21 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     date_str = date
             else:
                 date_str = "نامشخص"
-            emoji = "😊" if mood == "good" else "😐" if mood == "neutral" else "😔" if mood == "bad" else "😢"
+            emoji = "😊" if mood == "good" else "😐" if mood == "neutral" else "😔" if mood == "bad" else "😢" if mood == "sad" else "😡" if mood == "angry" else "🤔"
             text += f"{emoji} **{mood}** - {date_str}\n"
         
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-        await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        if is_callback:
+            await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logger.error(f"❌ خطا در نمایش تاریخچه: {e}")
-        await update.message.reply_text("❌ خطایی رخ داد.")
+        error_text = "❌ خطایی رخ داد. لطفاً دوباره تلاش کن."
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        if is_callback:
+            await query.edit_message_text(error_text, reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            await message.reply_text(error_text, reply_markup=InlineKeyboardMarkup(keyboard))
     finally:
         db.close()
