@@ -1,138 +1,177 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler
+from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
 
 logger = logging.getLogger(__name__)
 
+# States
 NAME, GENDER, AGE, STYLE = range(4)
 
 async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 start_profile اجرا شد")
     query = update.callback_query
     await query.answer()
+    
+    # حذف پیام قبلی (دکمه شروع ثبت‌نام)
     try:
         await query.message.delete()
     except:
         pass
-    msg = await query.message.reply_text("📝 **لطفاً نام خود را وارد کنید:**")
-    context.user_data['bot_msg_id'] = msg.message_id
+    
+    msg = await query.message.reply_text(
+        "📝 **ثبت‌نام**\n\n"
+        "به ربات همراه و مشاوره شخصی خوش آمدی!\n"
+        "برای شروع، لطفاً نام خود را وارد کن:"
+    )
+    # ذخیره message_id پیام ربات برای حذف بعدی
+    context.user_data['last_bot_message_id'] = msg.message_id
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"🔥 get_name اجرا شد! نام: {update.message.text}")
-    context.user_data["preferred_name"] = update.message.text
+    user_id = update.effective_user.id
+    name = update.message.text
     
+    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
     
+    # حذف پیام ربات قبلی (سوال نام)
     try:
-        bot_msg_id = context.user_data.get('bot_msg_id')
-        if bot_msg_id:
-            await update.message.bot.delete_message(
-                chat_id=update.effective_chat.id,
-                message_id=bot_msg_id
-            )
+        last_msg_id = context.user_data.get('last_bot_message_id')
+        if last_msg_id:
+            await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
     except:
         pass
     
+    context.user_data['preferred_name'] = name
+    
     keyboard = [
-        [InlineKeyboardButton("👨 مرد", callback_data="male")],
-        [InlineKeyboardButton("👩 زن", callback_data="female")]
+        [InlineKeyboardButton("👨 مرد", callback_data="gender_male")],
+        [InlineKeyboardButton("👩 زن", callback_data="gender_female")]
     ]
     msg = await update.message.reply_text(
-        "👤 **جنسیت خود را انتخاب کنید:**",
+        f"👋 خوش آمدی **{name}**!\n\n"
+        "جنسیت خود را انتخاب کن:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-    context.user_data['bot_msg_id'] = msg.message_id
+    context.user_data['last_bot_message_id'] = msg.message_id
     return GENDER
 
 async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ✅ دریافت query به درستی
     query = update.callback_query
     await query.answer()
-    logger.info(f"🔥 get_gender اجرا شد! جنسیت: {query.data}")
+    user_id = update.effective_user.id
+    gender = query.data.split("_")[1]
     
-    context.user_data["gender"] = query.data
+    # حذف پیام ربات قبلی (سوال جنسیت)
     try:
-        await query.message.delete()
+        last_msg_id = context.user_data.get('last_bot_message_id')
+        if last_msg_id:
+            await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
     except:
         pass
-    msg = await query.message.reply_text("📅 **سن خود را وارد کنید (عدد):**")
-    context.user_data['bot_msg_id'] = msg.message_id
+    
+    context.user_data['gender'] = gender
+    
+    msg = await query.message.reply_text(
+        "📅 **سن خود را وارد کن:**\n\n"
+        "(فقط عدد وارد کن، مثلاً ۲۵)"
+    )
+    context.user_data['last_bot_message_id'] = msg.message_id
     return AGE
 
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"🔥 get_age اجرا شد! سن: {update.message.text}")
+    user_id = update.effective_user.id
+    age_text = update.message.text
+    
+    # حذف پیام کاربر
     try:
-        age = int(update.message.text)
-        if age < 10 or age > 100:
-            raise ValueError
-        context.user_data["age"] = age
-        try:
-            await update.message.delete()
-        except:
-            pass
-        try:
-            bot_msg_id = context.user_data.get('bot_msg_id')
-            if bot_msg_id:
-                await update.message.bot.delete_message(
-                    chat_id=update.effective_chat.id,
-                    message_id=bot_msg_id
-                )
-        except:
-            pass
-        
-        keyboard = [
-            [InlineKeyboardButton("🤗 دوستانه", callback_data="friendly")],
-            [InlineKeyboardButton("👔 رسمی", callback_data="formal")],
-            [InlineKeyboardButton("😂 طنز", callback_data="funny")],
-            [InlineKeyboardButton("🧘 آرام", callback_data="calm")]
-        ]
-        msg = await update.message.reply_text(
-            "🎭 **لحن مورد نظر خود را انتخاب کنید:**",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        context.user_data['bot_msg_id'] = msg.message_id
-        return STYLE
-    except ValueError:
-        await update.message.reply_text("❌ لطفاً یک عدد معتبر بین ۱۰ تا ۱۰۰ وارد کنید.")
+        await update.message.delete()
+    except:
+        pass
+    
+    # حذف پیام ربات قبلی (سوال سن)
+    try:
+        last_msg_id = context.user_data.get('last_bot_message_id')
+        if last_msg_id:
+            await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
+    except:
+        pass
+    
+    if not age_text.isdigit():
+        msg = await update.message.reply_text("❌ لطفاً یک عدد معتبر وارد کن.")
+        context.user_data['last_bot_message_id'] = msg.message_id
         return AGE
+    
+    context.user_data['age'] = int(age_text)
+    
+    keyboard = [
+        [InlineKeyboardButton("🤗 دوستانه", callback_data="style_friendly")],
+        [InlineKeyboardButton("🧐 رسمی", callback_data="style_formal")],
+        [InlineKeyboardButton("😂 طنز", callback_data="style_funny")],
+        [InlineKeyboardButton("🧘 آرام", callback_data="style_calm")]
+    ]
+    msg = await update.message.reply_text(
+        "🎭 **سبک گفتگو را انتخاب کن:**\n\n"
+        "این سبک در بخش «گفتگوی همراه» استفاده میشه.",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    context.user_data['last_bot_message_id'] = msg.message_id
+    return STYLE
 
 async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    logger.info(f"🔥 get_style اجرا شد! لحن: {query.data}")
-    context.user_data["chat_style"] = query.data
+    user_id = update.effective_user.id
+    style = query.data.split("_")[1]
+    
+    # حذف پیام ربات قبلی (سوال سبک)
     try:
-        await query.message.delete()
+        last_msg_id = context.user_data.get('last_bot_message_id')
+        if last_msg_id:
+            await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
     except:
         pass
     
-    # ✅ ایجاد Session جدید برای هر درخواست
+    # ذخیره در دیتابیس
     db = SessionLocal()
     try:
         user = User(
-            user_id=update.effective_user.id,
-            preferred_name=context.user_data["preferred_name"],
-            gender=context.user_data["gender"],
-            age=context.user_data["age"],
-            chat_style=context.user_data["chat_style"]
+            user_id=user_id,
+            preferred_name=context.user_data['preferred_name'],
+            gender=context.user_data['gender'],
+            age=context.user_data['age'],
+            chat_style=style,
+            notifications=True,
+            morning_msg_enabled=True,
+            mood_history=[]
         )
         db.add(user)
         db.commit()
-        # ✅ بعد از commit، دیگر به user دسترسی نداریم
-        logger.info(f"✅ کاربر {context.user_data['preferred_name']} ذخیره شد!")
+        logger.info(f"✅ کاربر {user_id} ثبت‌نام کرد.")
+        
+        # حذف پیام انتخاب سبک
+        try:
+            await query.message.delete()
+        except:
+            pass
+        
+        keyboard = [[InlineKeyboardButton("🏠 رفتن به خانه", callback_data="main_menu")]]
+        await query.message.reply_text(
+            "✅ **ثبت‌نام شما با موفقیت کامل شد!**\n\n"
+            "به جمع کاربران ربات همراه خوش آمدی. 🌸\n"
+            "حالا می‌تونی از همه بخش‌ها استفاده کنی.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     except Exception as e:
         logger.error(f"❌ خطا در ذخیره کاربر: {e}")
+        await query.message.reply_text("❌ خطایی در ثبت‌نام رخ داد. لطفاً دوباره /start را بزنید.")
     finally:
         db.close()
     
-    await query.message.reply_text("✅ **ثبت‌نام با موفقیت انجام شد!**")
-    
-    from app.handlers.menu import main_menu
-    await main_menu(update, context)
-    return ConversationHandler.END
+    # پاک کردن dataهای موقت
+    context.user_data.clear()
+    return -1
