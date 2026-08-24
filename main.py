@@ -5,6 +5,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
+    ConversationHandler,
     MessageHandler,
     filters,
     ContextTypes
@@ -40,7 +41,7 @@ app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CommandHandler("menu", menu.main_menu))
 
 # ============================================================
-# ConversationHandler - غیرفعال (کامنت)
+# ConversationHandler ثبت‌نام - کاملاً غیرفعال (کامنت)
 # ============================================================
 # conv_handler = ConversationHandler(
 #     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
@@ -94,12 +95,32 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
 # ============================================================
-# MessageHandlerها - با filters.ALL
+# MessageHandlerها - با فیلتر صحیح و ترتیب درست
 # ============================================================
-app.add_handler(MessageHandler(filters.ALL, past_self.receive_answer))
-app.add_handler(MessageHandler(filters.ALL, past_self.chat_with_past_self))
-app.add_handler(MessageHandler(filters.ALL, therapist.chat_with_therapist))
-app.add_handler(MessageHandler(filters.ALL, chat.chat_with_ai))
+
+# ۱. خود گذشته (دریافت پاسخ مصاحبه)
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    past_self.receive_answer
+))
+
+# ۲. خود گذشته (گفتگوی آزاد)
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    past_self.chat_with_past_self
+))
+
+# ۳. درمانگر
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    therapist.chat_with_therapist
+))
+
+# ۴. گفتگوی عمومی - آخرین اولویت
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    chat.chat_with_ai
+))
 
 # ============================================================
 # Error Handler
@@ -138,4 +159,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-)
+        )
