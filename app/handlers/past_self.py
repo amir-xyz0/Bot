@@ -1,11 +1,9 @@
 import logging
-import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
 from app.openrouter_helper import call_openrouter
-from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +23,7 @@ PAST_QUESTIONS = [
 async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     query = update.callback_query
+    
     if query:
         await query.answer()
         message = query.message
@@ -35,29 +34,35 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         message = update.message
 
+    if not message:
+        return
+
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
-    except OperationalError:
-        user = None
+    except Exception as e:
+        logger.error(f"❌ خطا در دیتابیس: {e}")
+        await message.reply_text("❌ خطا در ارتباط با دیتابیس.")
+        db.close()
+        return
+    
+    db.close()
 
     if not user:
+        logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await message.reply_text(
             "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        db.close()
         return
 
     # تنظیم current_section
     context.user_data['current_section'] = 'past_self'
+    logger.info(f"🕰️ start_past_self: user_id={user_id}")
 
-    try:
-        past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else None
-    except:
-        past_answers = None
-    db.close()
+    # بررسی وجود پاسخ‌های قبلی
+    past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else None
 
     if past_answers and len(past_answers) > 0:
         keyboard = [
@@ -76,6 +81,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # شروع مصاحبه جدید
     context.user_data['past_self_mode'] = True
     context.user_data['past_self_step'] = 0
     context.user_data['past_self_answers'] = []
@@ -83,6 +89,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     step = context.user_data.get('past_self_step', 0)
+    
     if step >= len(PAST_QUESTIONS):
         await finish_interview(update, context)
         return
@@ -109,17 +116,30 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط اگر کاربر در بخش خودگذشته باشد و در حالت مصاحبه باشد
+    # اگر پیام متنی نیست، نادیده بگیر
+    if not update.message or not update.message.text:
+        return
+    
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        return
+    
+    # فقط اگر کاربر در بخش خودگذشته باشد
     if context.user_data.get('current_section') != 'past_self':
         return
+    
+    # اگر در حالت گفتگوی آزاد است، نادیده بگیر
     if context.user_data.get('past_self_free_chat'):
         return
 
     if not context.user_data.get('past_self_mode'):
         return
 
+    user_id = update.effective_user.id
     user_message = update.message.text
     step = context.user_data.get('past_self_step', 0)
+    
+    logger.info(f"📩 receive_answer: user_id={user_id}, step={step}")
 
     if step >= len(PAST_QUESTIONS):
         await finish_interview(update, context)
@@ -151,6 +171,8 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user.personality_profile = answers
             db.commit()
             logger.info(f"✅ پاسخ‌های کاربر {user_id} ذخیره شد")
+        else:
+            logger.warning(f"⚠️ کاربر {user_id} یافت نشد")
     except Exception as e:
         logger.error(f"❌ خطا در ذخیره پاسخ‌ها: {e}")
     finally:
@@ -231,6 +253,7 @@ async def delete_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user:
             user.personality_profile = None
             db.commit()
+            logger.info(f"🗑️ پاسخ‌های کاربر {user_id} پاک شد")
     except Exception as e:
         logger.error(f"❌ خطا: {e}")
     finally:
@@ -351,7 +374,15 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط اگر کاربر در بخش خودگذشته باشد و در حالت گفتگوی آزاد باشد
+    # اگر پیام متنی نیست، نادیده بگیر
+    if not update.message or not update.message.text:
+        return
+    
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        return
+    
+    # فقط اگر کاربر در بخش خودگذشته باشد
     if context.user_data.get('current_section') != 'past_self':
         return
 
@@ -360,15 +391,22 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = update.effective_user.id
     user_message = update.message.text
+    logger.info(f"💬 chat_with_past_self: user_id={user_id}")
 
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
-    except:
-        user = None
+    except Exception as e:
+        logger.error(f"❌ خطا در دیتابیس: {e}")
+        await update.message.reply_text("❌ خطا در ارتباط با دیتابیس.")
+        db.close()
+        return
+    
+    db.close()
 
     if not user:
-        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید.")
+        logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
+        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
     past_answers = user.personality_profile if hasattr(user, 'personality_profile') and user.personality_profile else []
@@ -412,13 +450,13 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 پاسخ خود را به‌عنوان «خود گذشته» بنویس (فقط پاسخ، بدون توضیحات اضافی):"""
 
-    db.close()
-
     result = call_openrouter(prompt, temperature=0.85, max_tokens=500, section="past_self")
 
     if result["success"]:
+        logger.info(f"✅ پاسخ ارسال شد به کاربر {user_id}")
         await update.message.reply_text(f"🕰️ **خود گذشته:**\n\n{result['reply']}")
     else:
+        logger.error(f"❌ خطا در پاسخ به کاربر {user_id}: {result['error']}")
         await update.message.reply_text(
-            f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم."
+            f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. خطا: {result['error']}"
     )
