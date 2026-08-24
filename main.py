@@ -5,7 +5,6 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
-    ConversationHandler,
     MessageHandler,
     filters,
     ContextTypes
@@ -39,73 +38,56 @@ app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 # ============================================================
 app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CommandHandler("menu", menu.main_menu))
-app.add_handler(CommandHandler("history", history.show_history))
-app.add_handler(CommandHandler("profile", profile_edit.show_profile))
-
-# ============================================================
-# ConversationHandler ثبت‌نام - حذف شده
-# ============================================================
 
 # ============================================================
 # CallbackQueryHandlerها
 # ============================================================
+app.add_handler(CallbackQueryHandler(profile.start_profile, pattern="start_profile"))
+app.add_handler(CallbackQueryHandler(profile.get_gender, pattern="^gender_"))
+app.add_handler(CallbackQueryHandler(profile.get_style, pattern="^style_"))
+
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
+app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
+app.add_handler(CallbackQueryHandler(menu.past_self_menu, pattern="past_self_menu"))
 app.add_handler(CallbackQueryHandler(menu.predict_menu, pattern="predict_menu"))
 app.add_handler(CallbackQueryHandler(menu.history_menu, pattern="history_menu"))
 app.add_handler(CallbackQueryHandler(menu.profile_menu, pattern="profile_menu"))
 
-app.add_handler(CallbackQueryHandler(profile_edit.edit_name, pattern="edit_name"))
-app.add_handler(CallbackQueryHandler(profile_edit.edit_gender, pattern="edit_gender"))
-app.add_handler(CallbackQueryHandler(profile_edit.set_gender, pattern="set_gender_"))
-app.add_handler(CallbackQueryHandler(profile_edit.edit_age, pattern="edit_age"))
-app.add_handler(CallbackQueryHandler(profile_edit.edit_style, pattern="edit_style"))
-app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_"))
-app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
-
-app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
-app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
-
-app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
-
-# خود گذشته - ورود
-app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
-app.add_handler(CallbackQueryHandler(past_self.show_answers, pattern="past_self_show_answers"))
-app.add_handler(CallbackQueryHandler(past_self.delete_answers, pattern="past_self_delete_answers"))
-app.add_handler(CallbackQueryHandler(past_self.new_interview, pattern="past_self_new_interview"))
-app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="past_self_end_interview"))
-app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
-app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
-
-# درمانگر - ورود و خروج
 app.add_handler(CallbackQueryHandler(therapist.start_therapy, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
+app.add_handler(CallbackQueryHandler(past_self.start_past_self, pattern="past_self_menu"))
+app.add_handler(CallbackQueryHandler(past_self.new_interview, pattern="past_self_new_interview"))
+app.add_handler(CallbackQueryHandler(past_self.free_chat, pattern="past_self_free_chat"))
+app.add_handler(CallbackQueryHandler(past_self.end_free_chat, pattern="past_self_end_free_chat"))
+app.add_handler(CallbackQueryHandler(past_self.end_interview_early, pattern="past_self_end_interview"))
+
 # ============================================================
-# MessageHandlerها - با filters.TEXT ساده (بدون ~filters.COMMAND)
+# MessageHandlerها - با filters.ALL (مطمئن‌ترین گزینه)
 # ============================================================
 
 # ۱. خود گذشته (دریافت پاسخ مصاحبه)
 app.add_handler(MessageHandler(
-    filters.TEXT,
+    filters.ALL,
     past_self.receive_answer
 ))
 
 # ۲. خود گذشته (گفتگوی آزاد)
 app.add_handler(MessageHandler(
-    filters.TEXT,
+    filters.ALL,
     past_self.chat_with_past_self
 ))
 
 # ۳. درمانگر
 app.add_handler(MessageHandler(
-    filters.TEXT,
+    filters.ALL,
     therapist.chat_with_therapist
 ))
 
 # ۴. گفتگوی عمومی (آخرین اولویت)
 app.add_handler(MessageHandler(
-    filters.TEXT,
+    filters.ALL,
     chat.chat_with_ai
 ))
 
