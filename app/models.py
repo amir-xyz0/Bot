@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, JSON
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -6,10 +6,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, unique=True, index=True, nullable=False)
+    user_id = Column(BigInteger, unique=True, index=True, nullable=False)  # 🔥 BigInteger
     preferred_name = Column(String, nullable=True)
     gender = Column(String, nullable=True)
-    age = Column(Integer, nullable=True)  # 🔥 از Integer استفاده کن، نه SmallInteger
+    age = Column(Integer, nullable=True)
     chat_style = Column(String, default="friendly")
     notifications = Column(Boolean, default=True)
     personality_profile = Column(JSON, nullable=True)
