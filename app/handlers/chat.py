@@ -8,15 +8,22 @@ from app.openrouter_helper import call_openrouter
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط پیام‌های متنی رو پردازش کن
+    logger.info("🔥 chat_with_ai فراخوانی شد!")
+    
+    # اگر پیام متنی نیست، نادیده بگیر
     if not update.message or not update.message.text:
-        return
-    if update.message.text.startswith('/'):
+        logger.info("⏭️ پیام متنی نیست")
         return
     
-    # فقط اگر کاربر در بخش چت باشد
-    if context.user_data.get('current_section') not in [None, 'chat']:
-        logger.info(f"⏭️ chat_with_ai: عبور (current_section={context.user_data.get('current_section')})")
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        logger.info("⏭️ پیام کامند است")
+        return
+    
+    # فقط اگر کاربر در بخش چت باشد (یا هیچ بخشی فعال نباشد)
+    current_section = context.user_data.get('current_section')
+    if current_section not in [None, 'chat']:
+        logger.info(f"⏭️ عبور از chat (current_section={current_section})")
         return
 
     user_id = update.effective_user.id
