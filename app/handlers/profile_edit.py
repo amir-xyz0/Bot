@@ -34,6 +34,9 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
 
+        # پاک کردن حالت ویرایش
+        context.user_data['editing'] = None
+
         text = (
             f"👤 **پروفایل شما**\n\n"
             f"نام: {user.preferred_name or 'تعیین نشده'}\n"
@@ -62,12 +65,55 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = update.effective_user.id
+    
+    # حذف پیام قبلی (پروفایل)
+    try:
+        await query.message.delete()
+    except:
+        pass
+    
     context.user_data['editing'] = 'name'
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="profile_menu")]]
-    await query.edit_message_text(
+    await query.message.reply_text(
         "✏️ نام جدید خود را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+async def process_name_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """پردازش ویرایش نام - توسط message_router صدا زده میشه"""
+    user_id = update.effective_user.id
+    new_name = update.message.text.strip()
+    
+    # حذف پیام کاربر
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+        if user:
+            user.preferred_name = new_name
+            db.commit()
+            
+            # پاک کردن حالت ویرایش
+            context.user_data['editing'] = None
+            
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await update.message.reply_text(
+                f"✅ نام شما با موفقیت به **{new_name}** تغییر یافت.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            logger.info(f"✅ نام کاربر {user_id} به {new_name} تغییر کرد")
+        else:
+            await update.message.reply_text("❗ کاربر یافت نشد.")
+    except Exception as e:
+        logger.error(f"❌ خطا در ویرایش نام: {e}")
+        await update.message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
+    finally:
+        db.close()
 
 async def edit_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -110,12 +156,59 @@ async def set_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def edit_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = update.effective_user.id
+    
+    # حذف پیام قبلی (پروفایل)
+    try:
+        await query.message.delete()
+    except:
+        pass
+    
     context.user_data['editing'] = 'age'
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="profile_menu")]]
-    await query.edit_message_text(
+    await query.message.reply_text(
         "✏️ سن خود را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+async def process_age_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """پردازش ویرایش سن - توسط message_router صدا زده میشه"""
+    user_id = update.effective_user.id
+    age_text = update.message.text.strip()
+    
+    # حذف پیام کاربر
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    if not age_text.isdigit():
+        await update.message.reply_text("❌ لطفاً یک عدد معتبر وارد کن.")
+        return
+    
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+        if user:
+            user.age = int(age_text)
+            db.commit()
+            
+            # پاک کردن حالت ویرایش
+            context.user_data['editing'] = None
+            
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await update.message.reply_text(
+                f"✅ سن شما با موفقیت به **{age_text}** تغییر یافت.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            logger.info(f"✅ سن کاربر {user_id} به {age_text} تغییر کرد")
+        else:
+            await update.message.reply_text("❗ کاربر یافت نشد.")
+    except Exception as e:
+        logger.error(f"❌ خطا در ویرایش سن: {e}")
+        await update.message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
+    finally:
+        db.close()
 
 async def edit_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -181,3 +274,19 @@ async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await query.edit_message_text("❌ خطایی رخ داد.")
     finally:
         db.close()
+
+async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """بازگشت به پروفایل و پاک کردن حالت ویرایش"""
+    query = update.callback_query
+    await query.answer()
+    
+    # پاک کردن حالت ویرایش
+    context.user_data['editing'] = None
+    
+    # حذف پیام فعلی (صفحه ویرایش)
+    try:
+        await query.message.delete()
+    except:
+        pass
+    
+    await show_profile(update, context)
