@@ -8,7 +8,7 @@ from app.openrouter_helper import call_openrouter
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔥 فقط این یک خط اضافه شده
+    # اگر کاربر در بخش تخصصی است، هیچ کاری نکن
     if context.user_data.get('current_section') not in [None, 'chat']:
         logger.info(f"⏭️ chat_with_ai: عبور (current_section={context.user_data.get('current_section')})")
         return
