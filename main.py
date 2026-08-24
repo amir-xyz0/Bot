@@ -96,7 +96,7 @@ app.add_handler(CallbackQueryHandler(therapist.start_therapy, pattern="therapy_m
 app.add_handler(CallbackQueryHandler(therapist.end_therapy, pattern="end_therapy"))
 
 # ============================================================
-# MessageHandlerها - فقط ترتیب تغییر کرده
+# MessageHandlerها - ترتیب درست
 # ============================================================
 
 # ۱. خود گذشته (دریافت پاسخ مصاحبه)
@@ -117,11 +117,17 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_a
 app.add_error_handler(error_handler)
 
 # ============================================================
-# دیتابیس و Scheduler
+# دیتابیس و Scheduler - ریست کامل
 # ============================================================
-# ⚠️ توجه: این کار تمام داده‌های موجود رو پاک می‌کنه!
-#Base.metadata.drop_all(engine)   # حذف جدول‌های قدیمی
-Base.metadata.create_all(engine)  # ایجاد جدول‌های جدید با مدل به‌روز
+# ⚠️ هشدار: این کار تمام داده‌های موجود رو پاک می‌کنه!
+logger.info("🗑️ در حال حذف جدول‌های قدیمی...")
+Base.metadata.drop_all(engine)
+logger.info("✅ جدول‌های قدیمی حذف شدند.")
+
+logger.info("🔧 در حال ایجاد جدول‌های جدید...")
+Base.metadata.create_all(engine)
+logger.info("✅ جدول‌های جدید ایجاد شدند.")
+
 start_scheduler()
 
 # ============================================================
@@ -148,4 +154,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-    )
+)
