@@ -117,16 +117,13 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.chat_with_a
 app.add_error_handler(error_handler)
 
 # ============================================================
-# دیتابیس و Scheduler - ریست کامل
+# دیتابیس و Scheduler - فقط ایجاد (بدون حذف)
 # ============================================================
-# ⚠️ هشدار: این کار تمام داده‌های موجود رو پاک می‌کنه!
-logger.info("🗑️ در حال حذف جدول‌های قدیمی...")
-Base.metadata.drop_all(engine)
-logger.info("✅ جدول‌های قدیمی حذف شدند.")
-
-logger.info("🔧 در حال ایجاد جدول‌های جدید...")
+# فقط اگر جدول وجود نداشت، ایجاد کن
+# این کار باعث میشه کاربران قبلی از بین نرن
+logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
 Base.metadata.create_all(engine)
-logger.info("✅ جدول‌های جدید ایجاد شدند.")
+logger.info("✅ جدول‌ها آماده هستند.")
 
 start_scheduler()
 
