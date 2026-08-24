@@ -1,7 +1,7 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from app.handlers import past_self, therapist  # 🔥 این خط حیاتی
+from app.handlers import past_self, therapist  # 🔥 ایمپورت درست
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ async def therapy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
-    await therapist.start_therapy(update, context)  # 🔥 حالا درست کار می‌کنه
+    await therapist.start_therapy(update, context)
 
 async def past_self_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -58,7 +58,7 @@ async def past_self_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
-    await past_self.start_past_self(update, context)  # 🔥 حالا درست کار می‌کنه
+    await past_self.start_past_self(update, context)
 
 async def predict_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
