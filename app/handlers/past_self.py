@@ -109,7 +109,7 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔥 فقط این دو شرط اضافه شده
+    # فقط اگر کاربر در بخش خودگذشته باشد و در حالت مصاحبه باشد
     if context.user_data.get('current_section') != 'past_self':
         return
     if context.user_data.get('past_self_free_chat'):
@@ -351,7 +351,7 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔥 فقط این یک شرط اضافه شده
+    # فقط اگر کاربر در بخش خودگذشته باشد و در حالت گفتگوی آزاد باشد
     if context.user_data.get('current_section') != 'past_self':
         return
 
@@ -421,4 +421,4 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_text(
             f"🕰️ **خود گذشته:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم."
-        )
+    )
