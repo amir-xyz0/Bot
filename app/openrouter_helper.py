@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 def call_openrouter(prompt, temperature=0.8, max_tokens=400, section="general"):
     """
-    ارسال درخواست به OpenRouter با پشتیبانی از بخش‌های مختلف
+    ارسال درخواست به OpenRouter
     section: chat, therapist, past_self, predictor
     """
     try:
@@ -41,7 +41,7 @@ def call_openrouter(prompt, temperature=0.8, max_tokens=400, section="general"):
             return {"success": False, "error": error_msg}
 
     except requests.exceptions.Timeout:
-        return {"success": False, "error": "زمان پاسخ‌دهی طولانی شد"}
+        return {"success": False, "error": "زمان پاسخدهی طولانی شد"}
     except requests.exceptions.ConnectionError:
         return {"success": False, "error": "اتصال به سرور برقرار نشد"}
     except Exception as e:
