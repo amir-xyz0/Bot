@@ -45,7 +45,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
 
-    logger.info(f"🧠 start_therapy: user_id={user_id}, current_section=therapist")
+    logger.info(f"🧠 start_therapy: user_id={user_id}")
 
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
@@ -54,21 +54,22 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # اگر پیام کامنده، نادیده بگیر
+    # فقط پیام‌های متنی رو پردازش کن
+    if not update.message or not update.message.text:
+        return
     if update.message.text.startswith('/'):
         return
     
-    # موقتاً کامنت شده:
-    # if context.user_data.get('current_section') != 'therapist':
-    #     logger.info(f"⏭️ chat_with_therapist: عبور (current_section={context.user_data.get('current_section')})")
-    #     return
+    # فقط اگر کاربر در بخش درمانگر باشد
+    if context.user_data.get('current_section') != 'therapist':
+        return
 
     if not context.user_data.get('therapy_mode'):
         return
 
     user_id = update.effective_user.id
     user_message = update.message.text
-    logger.info(f"🧠 chat_with_therapist: user_id={user_id}, message={user_message[:30]}...")
+    logger.info(f"🧠 chat_with_therapist: user_id={user_id}")
 
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
@@ -80,9 +81,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     step = context.user_data.get('therapy_step', 'start')
 
-    # ============================================================
-    # پرامپت اختصاصی درمانگر – کاملاً مستقل از chat_style
-    # ============================================================
     prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
 
 ویژگی‌های تو که این بخش را از دیگر بخش‌های ربات کاملاً متمایز می‌کند:
@@ -131,12 +129,11 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # پاک کردن current_section هنگام خروج
     context.user_data['current_section'] = None
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
 
-    logger.info(f"🧠 end_therapy: current_section پاک شد")
+    logger.info(f"🧠 end_therapy")
 
     try:
         await query.message.delete()
@@ -148,4 +145,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    )
