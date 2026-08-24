@@ -8,12 +8,14 @@ logger = logging.getLogger(__name__)
 
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
-    # تشخیص اینکه از callback_query اومده یا نه
     query = update.callback_query
     if query:
         await query.answer()
         message = query.message
+        try:
+            await message.delete()
+        except:
+            pass
     else:
         message = update.message
 
@@ -26,7 +28,7 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
             await message.reply_text(
-                "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
+                "❗ ثبت‌نام نکرده‌اید.",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             db.close()
@@ -48,12 +50,12 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("✏️ ویرایش سن", callback_data="edit_age")],
             [InlineKeyboardButton("✏️ ویرایش سبک گفتگو", callback_data="edit_style")],
             [InlineKeyboardButton("🔔 تنظیم اعلان‌ها", callback_data="edit_notifications")],
-            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
+            [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
         ]
         await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logger.error(f"❌ خطا در نمایش پروفایل: {e}")
-        await message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+        await message.reply_text("❌ خطایی رخ داد.")
     finally:
         db.close()
 
@@ -92,7 +94,11 @@ async def set_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user:
             user.gender = gender
             db.commit()
-            await query.edit_message_text("✅ جنسیت با موفقیت به‌روزرسانی شد.")
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await query.edit_message_text(
+                "✅ جنسیت با موفقیت به‌روزرسانی شد.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
         else:
             await query.edit_message_text("❗ کاربر یافت نشد.")
     except Exception as e:
@@ -138,7 +144,11 @@ async def set_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user:
             user.chat_style = style
             db.commit()
-            await query.edit_message_text("✅ سبک گفتگو با موفقیت به‌روزرسانی شد.")
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await query.edit_message_text(
+                "✅ سبک گفتگو با موفقیت به‌روزرسانی شد.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
         else:
             await query.edit_message_text("❗ کاربر یافت نشد.")
     except Exception as e:
@@ -159,7 +169,11 @@ async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE)
             user.notifications = not user.notifications
             db.commit()
             status = "فعال" if user.notifications else "غیرفعال"
-            await query.edit_message_text(f"✅ اعلان‌ها {status} شدند.")
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await query.edit_message_text(
+                f"✅ اعلان‌ها {status} شدند.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
         else:
             await query.edit_message_text("❗ کاربر یافت نشد.")
     except Exception as e:
