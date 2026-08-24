@@ -1,6 +1,7 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from app.handlers import past_self, therapist  # 🔥 این خط حیاتی
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +31,14 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     logger.info(f"✅ chat_menu: user_id={query.from_user.id}")
-    
     try:
         await query.message.delete()
     except:
         pass
-    
     context.user_data['current_section'] = 'chat'
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
     await query.message.reply_text(
-        "💬 **گفتگو با همراه**\n\n"
-        "هر سوالی داری، بپرس. من اینجام تا کمکت کنم.\n"
-        "لحنی که در ثبت‌نام انتخاب کردی، در پاسخ‌ها اعمال میشه.",
+        "💬 **گفتگو با همراه**\n\nهر سوالی داری، بپرس.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -52,7 +49,7 @@ async def therapy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
-    await therapist.start_therapy(update, context)
+    await therapist.start_therapy(update, context)  # 🔥 حالا درست کار می‌کنه
 
 async def past_self_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -61,7 +58,7 @@ async def past_self_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
-    await past_self.start_past_self(update, context)
+    await past_self.start_past_self(update, context)  # 🔥 حالا درست کار می‌کنه
 
 async def predict_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -70,6 +67,7 @@ async def predict_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
+    from app.handlers import predictor
     await predictor.predict_tomorrow(update, context)
 
 async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -79,6 +77,7 @@ async def history_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
+    from app.handlers import history
     await history.full_history(update, context)
 
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -88,4 +87,5 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.delete()
     except:
         pass
+    from app.handlers import profile_edit
     await profile_edit.show_profile(update, context)
