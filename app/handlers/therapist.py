@@ -56,10 +56,9 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"🧠 start_therapy: user_id={user_id}")
 
-    # فقط در پیام اولیه هدر و دکمه پایان جلسه نمایش داده میشه
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
-        f"🧠 **درمانگر درون**\n\n{THERAPY_QUESTIONS['start']}",
+        f"🧠 **مشاوره درون**\n\n{THERAPY_QUESTIONS['start']}",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -179,7 +178,7 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
-        "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
+        "🌿 **جلسه‌ی مشاوره به پایان رسید.**\n\n"
         "هر زمان که نیاز داشتی، من اینجام تا همراهت باشم. 🌸",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
