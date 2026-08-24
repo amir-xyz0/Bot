@@ -18,7 +18,6 @@ THERAPY_QUESTIONS = {
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     query = update.callback_query
-    
     if query:
         await query.answer()
         message = query.message
@@ -40,7 +39,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("❌ خطا در ارتباط با دیتابیس.")
         db.close()
         return
-    
     db.close()
 
     if not user:
@@ -52,7 +50,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # تنظیم current_section
     context.user_data['current_section'] = 'therapist'
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
@@ -66,11 +63,9 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # اگر پیام متنی نیست، نادیده بگیر
+    # فقط پیام‌های متنی رو پردازش کن
     if not update.message or not update.message.text:
         return
-    
-    # اگر پیام کامنده، نادیده بگیر
     if update.message.text.startswith('/'):
         return
     
@@ -93,7 +88,6 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ خطا در ارتباط با دیتابیس.")
         db.close()
         return
-    
     db.close()
 
     if not user:
@@ -152,7 +146,6 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # پاک کردن current_section
     context.user_data['current_section'] = None
     context.user_data['therapy_mode'] = False
     context.user_data['therapy_step'] = 'start'
