@@ -8,11 +8,9 @@ from app.openrouter_helper import call_openrouter
 logger = logging.getLogger(__name__)
 
 async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # اگر پیام متنی نیست، نادیده بگیر
+    # فقط پیام‌های متنی رو پردازش کن
     if not update.message or not update.message.text:
         return
-    
-    # اگر پیام کامنده، نادیده بگیر
     if update.message.text.startswith('/'):
         return
     
@@ -32,7 +30,6 @@ async def chat_with_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ خطا در ارتباط با دیتابیس.")
         db.close()
         return
-    
     db.close()
 
     if not user:
