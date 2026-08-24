@@ -5,7 +5,6 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
-    ConversationHandler,
     MessageHandler,
     filters,
     ContextTypes
@@ -41,20 +40,9 @@ app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CommandHandler("menu", menu.main_menu))
 
 # ============================================================
-# ConversationHandler ثبت‌نام - کاملاً غیرفعال (کامنت)
+# ConversationHandler - غیرفعال
 # ============================================================
-# conv_handler = ConversationHandler(
-#     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
-#     states={
-#         profile.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_name)],
-#         profile.GENDER: [CallbackQueryHandler(profile.get_gender)],
-#         profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
-#         profile.STYLE: [CallbackQueryHandler(profile.get_style)]
-#     },
-#     fallbacks=[CommandHandler("start", start.start)],
-#     per_message=False
-# )
-# app.add_handler(conv_handler)
+# conv_handler = ConversationHandler(...)
 
 # ============================================================
 # CallbackQueryHandlerها
@@ -95,32 +83,20 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
 # ============================================================
-# MessageHandlerها - با فیلتر صحیح و ترتیب درست
+# MessageHandlerها - با filters.ALL (مطمئن‌ترین گزینه)
 # ============================================================
 
-# ۱. خود گذشته (دریافت پاسخ مصاحبه)
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
-    past_self.receive_answer
-))
+# ۱. خود گذشته (دریافت پاسخ مصاحبه) - اولویت اول
+app.add_handler(MessageHandler(filters.ALL, past_self.receive_answer))
 
 # ۲. خود گذشته (گفتگوی آزاد)
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
-    past_self.chat_with_past_self
-))
+app.add_handler(MessageHandler(filters.ALL, past_self.chat_with_past_self))
 
 # ۳. درمانگر
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
-    therapist.chat_with_therapist
-))
+app.add_handler(MessageHandler(filters.ALL, therapist.chat_with_therapist))
 
 # ۴. گفتگوی عمومی - آخرین اولویت
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
-    chat.chat_with_ai
-))
+app.add_handler(MessageHandler(filters.ALL, chat.chat_with_ai))
 
 # ============================================================
 # Error Handler
@@ -159,4 +135,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-        )
+    )
