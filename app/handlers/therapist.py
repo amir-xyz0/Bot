@@ -57,6 +57,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"🧠 start_therapy: user_id={user_id}")
 
+    # فقط در پیام اولیه دکمه پایان جلسه نمایش داده میشه
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
         f"🧠 **درمانگر درون**\n\n{THERAPY_QUESTIONS['start']}",
@@ -66,17 +67,13 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("🔥 chat_with_therapist فراخوانی شد!")
     
-    # اگر پیام متنی نیست، نادیده بگیر
     if not update.message or not update.message.text:
         logger.info("⏭️ پیام متنی نیست")
         return
-    
-    # اگر پیام کامنده، نادیده بگیر
     if update.message.text.startswith('/'):
         logger.info("⏭️ پیام کامند است")
         return
     
-    # فقط اگر کاربر در بخش درمانگر باشد
     if context.user_data.get('current_section') != 'therapist':
         logger.info(f"⏭️ عبور از therapist (current_section={context.user_data.get('current_section')})")
         return
@@ -89,11 +86,15 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_message = update.message.text
     logger.info(f"🧠 chat_with_therapist: user_id={user_id}")
 
+    # ارسال پیام "در حال پردازش..."
+    loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
+
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
     except Exception as e:
         logger.error(f"❌ خطا در دیتابیس: {e}")
+        await loading_msg.delete()
         await update.message.reply_text("❌ خطا در ارتباط با دیتابیس.")
         db.close()
         return
@@ -101,6 +102,7 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if not user:
         logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
+        await loading_msg.delete()
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
@@ -134,16 +136,21 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     result = call_openrouter(prompt, temperature=0.75, max_tokens=500, section="therapist")
 
+    # حذف پیام "در حال پردازش..."
+    try:
+        await loading_msg.delete()
+    except:
+        pass
+
     if result["success"]:
         steps = ['start', 'identify', 'challenge', 'reframe', 'action']
         current_idx = steps.index(step) if step in steps else 0
         if current_idx < len(steps) - 1:
             context.user_data['therapy_step'] = steps[current_idx + 1]
 
-        keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
+        # فقط پاسخ درمانگر بدون دکمه پایان جلسه
         await update.message.reply_text(
-            f"🧠 **درمانگر:**\n\n{result['reply']}",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            f"🧠 **درمانگر:**\n\n{result['reply']}"
         )
     else:
         logger.error(f"❌ خطا در پاسخ به کاربر {user_id}: {result['error']}")
