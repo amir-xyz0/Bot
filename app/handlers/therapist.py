@@ -18,6 +18,7 @@ THERAPY_QUESTIONS = {
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     query = update.callback_query
+    
     if query:
         await query.answer()
         message = query.message
@@ -28,11 +29,22 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         message = update.message
 
+    if not message:
+        return
+
     db = SessionLocal()
-    user = db.query(User).filter_by(user_id=user_id).first()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+    except Exception as e:
+        logger.error(f"❌ خطا در دیتابیس: {e}")
+        await message.reply_text("❌ خطا در ارتباط با دیتابیس.")
+        db.close()
+        return
+    
     db.close()
 
     if not user:
+        logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await message.reply_text(
             "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
@@ -54,6 +66,14 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # اگر پیام متنی نیست، نادیده بگیر
+    if not update.message or not update.message.text:
+        return
+    
+    # اگر پیام کامنده، نادیده بگیر
+    if update.message.text.startswith('/'):
+        return
+    
     # فقط اگر کاربر در بخش درمانگر باشد
     if context.user_data.get('current_section') != 'therapist':
         return
@@ -66,11 +86,19 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
     logger.info(f"🧠 chat_with_therapist: user_id={user_id}")
 
     db = SessionLocal()
-    user = db.query(User).filter_by(user_id=user_id).first()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+    except Exception as e:
+        logger.error(f"❌ خطا در دیتابیس: {e}")
+        await update.message.reply_text("❌ خطا در ارتباط با دیتابیس.")
+        db.close()
+        return
+    
     db.close()
 
     if not user:
-        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید.")
+        logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
+        await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
     step = context.user_data.get('therapy_step', 'start')
@@ -115,8 +143,9 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
+        logger.error(f"❌ خطا در پاسخ به کاربر {user_id}: {result['error']}")
         await update.message.reply_text(
-            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم."
+            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. خطا: {result['error']}"
         )
 
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -138,4 +167,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    )
