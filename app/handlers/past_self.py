@@ -387,11 +387,15 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_message = update.message.text
     logger.info(f"💬 chat_with_past_self: user_id={user_id}")
 
+    # ارسال پیام "در حال پردازش..."
+    loading_msg = await update.message.reply_text("⏳ در حال پردازش...")
+
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
     except Exception as e:
         logger.error(f"❌ خطا در دیتابیس: {e}")
+        await loading_msg.delete()
         await update.message.reply_text("❌ خطا در ارتباط با دیتابیس.")
         db.close()
         return
@@ -399,6 +403,7 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if not user:
         logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
+        await loading_msg.delete()
         await update.message.reply_text("❗ ثبت‌نام نکرده‌اید. /start را بزنید.")
         return
 
@@ -444,6 +449,12 @@ async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE
 پاسخ خود را به‌عنوان «خود گذشته» بنویس (فقط پاسخ، بدون توضیحات اضافی):"""
 
     result = call_openrouter(prompt, temperature=0.85, max_tokens=500, section="past_self")
+
+    # حذف پیام "در حال پردازش..."
+    try:
+        await loading_msg.delete()
+    except:
+        pass
 
     if result["success"]:
         logger.info(f"✅ پاسخ ارسال شد به کاربر {user_id}")
