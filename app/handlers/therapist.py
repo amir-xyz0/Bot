@@ -45,6 +45,8 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['therapy_mode'] = True
     context.user_data['therapy_step'] = 'start'
 
+    logger.info(f"🧠 start_therapy: user_id={user_id}")
+
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
         f"🧠 **درمانگر درون**\n\n{THERAPY_QUESTIONS['start']}",
@@ -52,7 +54,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔥 فقط این یک شرط اضافه شده
+    # فقط اگر کاربر در بخش درمانگر باشد
     if context.user_data.get('current_section') != 'therapist':
         return
 
@@ -61,7 +63,7 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = update.effective_user.id
     user_message = update.message.text
-    logger.info(f"chat_with_therapist: user_id={user_id}")
+    logger.info(f"🧠 chat_with_therapist: user_id={user_id}")
 
     db = SessionLocal()
     user = db.query(User).filter_by(user_id=user_id).first()
@@ -136,4 +138,4 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
         "هر زمان که نیاز داشتی، من اینجام.",
         reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+        )
