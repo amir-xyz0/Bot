@@ -43,7 +43,6 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
 
     if not user:
-        logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await message.reply_text(
             "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
@@ -57,7 +56,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"🧠 start_therapy: user_id={user_id}")
 
-    # فقط در پیام اولیه دکمه پایان جلسه نمایش داده میشه
+    # فقط در پیام اولیه هدر و دکمه پایان جلسه نمایش داده میشه
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
         f"🧠 **درمانگر درون**\n\n{THERAPY_QUESTIONS['start']}",
@@ -108,16 +107,23 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     step = context.user_data.get('therapy_step', 'start')
 
-    prompt = f"""تو یک درمانگر شناختی-رفتاری با سبک «فلسفی و همدلانه» هستی.
+    # ============================================================
+    # پرامپت فوق‌العاده صمیمی، گرم و حرفه‌ای - بدون "سلام" تکراری
+    # ============================================================
+    prompt = f"""تو یک همراه و مشاور گرم، صمیمی و فوق‌العاده حرفه‌ای هستی. 
+دلت می‌خواهد کاربر احساس کند با یک دوست قدیمی و دانا حرف می‌زند.
 
-ویژگی‌های تو که این بخش را از دیگر بخش‌های ربات کاملاً متمایز می‌کند:
-- لحنت گرم، عمیق و انسانی است (نه طنز، نه رسمی خشک)
-- مانند یک حکیم یا مشاور بزرگ صحبت می‌کنی
+شخصیت تو:
+- لحنت گرم، انسانی، پر از همدلی و درک عمیق است
+- مانند یک حکیم مهربان و یک دوست صمیمی صحبت می‌کنی
 - از جملات تأمل‌برانگیز و پرسش‌های سقراطی استفاده می‌کنی
-- هرگز قضاوت نمی‌کنی، فقط همراهی می‌کنی
-- پاسخ‌هایت سرشار از همدلی و درک عمیق است
+- هرگز قضاوت نمی‌کنی، فقط همراهی و راهنمایی می‌کنی
+- پاسخ‌هایت سرشار از انرژی مثبت، امید و آرامش است
+- احساسات کاربر را درک می‌کنی و به آن احترام می‌گذاری
+- از کلمات ساده، دلنشین و روان استفاده می‌کنی
+- پاسخ‌هایت مختصر، مفید و تأثیرگذار است (حداکثر ۳-۴ پاراگراف)
 
-مرحله فعلی جلسه: {step}
+مرحله فعلی: {step}
 سوال استاندارد این مرحله: {THERAPY_QUESTIONS.get(step, '')}
 
 اطلاعات کاربر:
@@ -127,14 +133,16 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
 پیام کاربر: {user_message}
 
 وظیفه‌ات:
-۱. با همدلی عمیق پاسخ بده.
+۱. با همدلی و گرمی پاسخ بده.
 ۲. پاسخ باید حس کند که یک انسان واقعی با او حرف می‌زند.
-۳. در پایان، سوال بعدی را به‌صورت طبیعی بپرس.
-۴. از جملات فلسفی و الهام‌بخش استفاده کن.
+۳. در پایان، سوال بعدی را به‌صورت طبیعی بپرس (مثل یک مکالمه واقعی).
+۴. از جملات الهام‌بخش و امیدوارکننده استفاده کن.
 
-پاسخ خود را به‌عنوان یک درمانگر بنویس (بدون مقدمه‌چینی اضافی):"""
+⭐ پاسخ خود را بدون هیچ مقدمه‌ای و مستقیم شروع کن.
+⭐ هیچوقت با «سلام» یا «درود» شروع نکن.
+⭐ فقط پاسخ بده، طوری که انگار وسط یک مکالمه صمیمی هستی."""
 
-    result = call_openrouter(prompt, temperature=0.75, max_tokens=500, section="therapist")
+    result = call_openrouter(prompt, temperature=0.8, max_tokens=500, section="therapist")
 
     # حذف پیام "در حال پردازش..."
     try:
@@ -148,14 +156,12 @@ async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE
         if current_idx < len(steps) - 1:
             context.user_data['therapy_step'] = steps[current_idx + 1]
 
-        # فقط پاسخ درمانگر بدون دکمه پایان جلسه
-        await update.message.reply_text(
-            f"🧠 **درمانگر:**\n\n{result['reply']}"
-        )
+        # فقط پاسخ بدون هدر و بدون دکمه
+        await update.message.reply_text(result["reply"])
     else:
         logger.error(f"❌ خطا در پاسخ به کاربر {user_id}: {result['error']}")
         await update.message.reply_text(
-            f"🧠 **درمانگر:**\n\nمتأسفم، الان نمی‌تونم خوب فکر کنم. خطا: {result['error']}"
+            f"متأسفم، الان نمی‌تونم خوب فکر کنم. لطفاً دوباره تلاش کن. ❤️"
         )
 
 async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -174,6 +180,6 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
         "🌿 **جلسه‌ی درمانگری به پایان رسید.**\n\n"
-        "هر زمان که نیاز داشتی، من اینجام.",
+        "هر زمان که نیاز داشتی، من اینجام تا همراهت باشم. 🌸",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
