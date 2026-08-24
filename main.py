@@ -5,7 +5,6 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
-    ConversationHandler,
     MessageHandler,
     filters,
     ContextTypes
@@ -78,6 +77,7 @@ app.add_handler(CallbackQueryHandler(profile_edit.edit_age, pattern="edit_age"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_style, pattern="edit_style"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
+app.add_handler(CallbackQueryHandler(profile_edit.profile_menu, pattern="profile_menu"))
 
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
 app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history"))
@@ -87,7 +87,7 @@ app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predic
 # یک MessageHandler واحد برای همه‌ی پیام‌ها
 # ============================================================
 async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """مسیریابی پیام‌ها بر اساس current_section"""
+    """مسیریابی پیام‌ها بر اساس current_section و حالت ویرایش"""
     logger.info("🔥 message_router فراخوانی شد!")
     
     # فقط پیام‌های متنی رو پردازش کن
@@ -98,23 +98,33 @@ async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info("⏭️ پیام کامند است")
         return
 
+    # ============================================================
+    # اولویت ۱: حالت ویرایش پروفایل
+    # ============================================================
+    editing = context.user_data.get('editing')
+    if editing == 'name':
+        from app.handlers import profile_edit
+        await profile_edit.process_name_edit(update, context)
+        return
+    elif editing == 'age':
+        from app.handlers import profile_edit
+        await profile_edit.process_age_edit(update, context)
+        return
+
+    # ============================================================
+    # اولویت ۲: مسیریابی بر اساس current_section
+    # ============================================================
     current_section = context.user_data.get('current_section')
     logger.info(f"📩 message_router: current_section={current_section}")
 
-    # مسیریابی بر اساس current_section
     if current_section == 'past_self':
-        # اگر در بخش خودگذشته هستیم
         if context.user_data.get('past_self_free_chat'):
-            # حالت گفتگوی آزاد
             await past_self.chat_with_past_self(update, context)
         else:
-            # حالت مصاحبه
             await past_self.receive_answer(update, context)
     elif current_section == 'therapist':
-        # بخش درمانگر
         await therapist.chat_with_therapist(update, context)
     else:
-        # بخش چت یا هیچ بخشی (current_section == None یا 'chat')
         await chat.chat_with_ai(update, context)
 
 app.add_handler(MessageHandler(filters.ALL, message_router))
