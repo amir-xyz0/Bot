@@ -34,8 +34,9 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
 
-        # پاک کردن حالت ویرایش
+        # پاک کردن حالت ویرایش و پیام سوال
         context.user_data['editing'] = None
+        context.user_data['edit_question_id'] = None
 
         text = (
             f"👤 **پروفایل شما**\n\n"
@@ -75,10 +76,13 @@ async def edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data['editing'] = 'name'
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="profile_menu")]]
-    await query.message.reply_text(
+    
+    # ذخیره message_id پیام سوال برای حذف بعدی
+    msg = await query.message.reply_text(
         "✏️ نام جدید خود را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+    context.user_data['edit_question_id'] = msg.message_id
 
 async def process_name_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش ویرایش نام - توسط message_router صدا زده میشه"""
@@ -90,6 +94,15 @@ async def process_name_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
     except:
         pass
+    
+    # حذف پیام سوال (✏️ نام جدید خود را وارد کنید:)
+    question_id = context.user_data.get('edit_question_id')
+    if question_id:
+        try:
+            await context.bot.delete_message(chat_id=user_id, message_id=question_id)
+            context.user_data['edit_question_id'] = None
+        except:
+            pass
     
     db = SessionLocal()
     try:
@@ -166,10 +179,13 @@ async def edit_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data['editing'] = 'age'
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="profile_menu")]]
-    await query.message.reply_text(
+    
+    # ذخیره message_id پیام سوال برای حذف بعدی
+    msg = await query.message.reply_text(
         "✏️ سن خود را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+    context.user_data['edit_question_id'] = msg.message_id
 
 async def process_age_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش ویرایش سن - توسط message_router صدا زده میشه"""
@@ -181,6 +197,15 @@ async def process_age_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
     except:
         pass
+    
+    # حذف پیام سوال (✏️ سن خود را وارد کنید:)
+    question_id = context.user_data.get('edit_question_id')
+    if question_id:
+        try:
+            await context.bot.delete_message(chat_id=user_id, message_id=question_id)
+            context.user_data['edit_question_id'] = None
+        except:
+            pass
     
     if not age_text.isdigit():
         await update.message.reply_text("❌ لطفاً یک عدد معتبر وارد کن.")
@@ -280,8 +305,9 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # پاک کردن حالت ویرایش
+    # پاک کردن حالت ویرایش و پیام سوال
     context.user_data['editing'] = None
+    context.user_data['edit_question_id'] = None
     
     # حذف پیام فعلی (صفحه ویرایش)
     try:
