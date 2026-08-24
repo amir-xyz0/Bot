@@ -5,6 +5,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
+    ConversationHandler,
     MessageHandler,
     filters,
     ContextTypes
@@ -83,20 +84,40 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
 # ============================================================
-# MessageHandlerها - با filters.ALL (مطمئن‌ترین گزینه)
+# یک MessageHandler واحد برای همه‌ی پیام‌ها
 # ============================================================
+async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """مسیریابی پیام‌ها بر اساس current_section"""
+    logger.info("🔥 message_router فراخوانی شد!")
+    
+    # فقط پیام‌های متنی رو پردازش کن
+    if not update.message or not update.message.text:
+        logger.info("⏭️ پیام متنی نیست")
+        return
+    if update.message.text.startswith('/'):
+        logger.info("⏭️ پیام کامند است")
+        return
 
-# ۱. خود گذشته (دریافت پاسخ مصاحبه) - اولویت اول
-app.add_handler(MessageHandler(filters.ALL, past_self.receive_answer))
+    current_section = context.user_data.get('current_section')
+    logger.info(f"📩 message_router: current_section={current_section}")
 
-# ۲. خود گذشته (گفتگوی آزاد)
-app.add_handler(MessageHandler(filters.ALL, past_self.chat_with_past_self))
+    # مسیریابی بر اساس current_section
+    if current_section == 'past_self':
+        # اگر در بخش خودگذشته هستیم
+        if context.user_data.get('past_self_free_chat'):
+            # حالت گفتگوی آزاد
+            await past_self.chat_with_past_self(update, context)
+        else:
+            # حالت مصاحبه
+            await past_self.receive_answer(update, context)
+    elif current_section == 'therapist':
+        # بخش درمانگر
+        await therapist.chat_with_therapist(update, context)
+    else:
+        # بخش چت یا هیچ بخشی (current_section == None یا 'chat')
+        await chat.chat_with_ai(update, context)
 
-# ۳. درمانگر
-app.add_handler(MessageHandler(filters.ALL, therapist.chat_with_therapist))
-
-# ۴. گفتگوی عمومی - آخرین اولویت
-app.add_handler(MessageHandler(filters.ALL, chat.chat_with_ai))
+app.add_handler(MessageHandler(filters.ALL, message_router))
 
 # ============================================================
 # Error Handler
