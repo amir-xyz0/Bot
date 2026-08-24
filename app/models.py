@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -9,7 +9,7 @@ class User(Base):
     user_id = Column(Integer, unique=True, index=True, nullable=False)
     preferred_name = Column(String, nullable=True)
     gender = Column(String, nullable=True)
-    age = Column(Integer, nullable=True)
+    age = Column(Integer, nullable=True)  # 🔥 از Integer استفاده کن، نه SmallInteger
     chat_style = Column(String, default="friendly")
     notifications = Column(Boolean, default=True)
     personality_profile = Column(JSON, nullable=True)
