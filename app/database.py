@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import config
 
-# تعیین connect_args بر اساس نوع دیتابیس
+# فقط برای SQLite از check_same_thread استفاده کن
 connect_args = {}
 if config.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
