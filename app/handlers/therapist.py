@@ -16,6 +16,7 @@ THERAPY_QUESTIONS = {
 }
 
 async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 start_therapy فراخوانی شد!")
     user_id = update.effective_user.id
     query = update.callback_query
     if query:
@@ -63,17 +64,25 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_therapist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط پیام‌های متنی رو پردازش کن
+    logger.info("🔥 chat_with_therapist فراخوانی شد!")
+    
+    # اگر پیام متنی نیست، نادیده بگیر
     if not update.message or not update.message.text:
+        logger.info("⏭️ پیام متنی نیست")
         return
+    
+    # اگر پیام کامنده، نادیده بگیر
     if update.message.text.startswith('/'):
+        logger.info("⏭️ پیام کامند است")
         return
     
     # فقط اگر کاربر در بخش درمانگر باشد
     if context.user_data.get('current_section') != 'therapist':
+        logger.info(f"⏭️ عبور از therapist (current_section={context.user_data.get('current_section')})")
         return
 
     if not context.user_data.get('therapy_mode'):
+        logger.info("⏭️ therapy_mode=False")
         return
 
     user_id = update.effective_user.id
