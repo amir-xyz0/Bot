@@ -21,6 +21,7 @@ PAST_QUESTIONS = [
 ]
 
 async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 start_past_self فراخوانی شد!")
     user_id = update.effective_user.id
     query = update.callback_query
     if query:
@@ -47,6 +48,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.close()
 
     if not user:
+        logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await message.reply_text(
             "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
@@ -109,23 +111,29 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def receive_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط پیام‌های متنی رو پردازش کن
+    logger.info("🔥 receive_answer فراخوانی شد!")
+
     if not update.message or not update.message.text:
+        logger.info("⏭️ پیام متنی نیست")
         return
     if update.message.text.startswith('/'):
+        logger.info("⏭️ پیام کامند است")
         return
-    
+
     if context.user_data.get('current_section') != 'past_self':
+        logger.info(f"⏭️ عبور از receive_answer (current_section={context.user_data.get('current_section')})")
         return
     if context.user_data.get('past_self_free_chat'):
+        logger.info("⏭️ در حالت گفتگوی آزاد، receive_answer عبور می‌کند")
         return
     if not context.user_data.get('past_self_mode'):
+        logger.info("⏭️ past_self_mode=False")
         return
 
     user_id = update.effective_user.id
     user_message = update.message.text
     step = context.user_data.get('past_self_step', 0)
-    
+
     logger.info(f"📩 receive_answer: user_id={user_id}, step={step}")
 
     if step >= len(PAST_QUESTIONS):
@@ -284,7 +292,7 @@ async def new_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def end_interview_early(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_step'] = 0
@@ -342,7 +350,7 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     context.user_data['current_section'] = None
     context.user_data['past_self_mode'] = False
     context.user_data['past_self_free_chat'] = False
@@ -359,15 +367,20 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def chat_with_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # فقط پیام‌های متنی رو پردازش کن
+    logger.info("🔥 chat_with_past_self فراخوانی شد!")
+
     if not update.message or not update.message.text:
+        logger.info("⏭️ پیام متنی نیست")
         return
     if update.message.text.startswith('/'):
+        logger.info("⏭️ پیام کامند است")
         return
-    
+
     if context.user_data.get('current_section') != 'past_self':
+        logger.info(f"⏭️ عبور از chat_with_past_self (current_section={context.user_data.get('current_section')})")
         return
     if not context.user_data.get('past_self_mode') or not context.user_data.get('past_self_free_chat'):
+        logger.info("⏭️ past_self_mode=False یا past_self_free_chat=False")
         return
 
     user_id = update.effective_user.id
