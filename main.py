@@ -5,6 +5,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
+    ConversationHandler,
     MessageHandler,
     filters,
     ContextTypes
@@ -40,9 +41,20 @@ app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CommandHandler("menu", menu.main_menu))
 
 # ============================================================
-# ConversationHandler - غیرفعال
+# ConversationHandler ثبت‌نام - فعال
 # ============================================================
-# conv_handler = ConversationHandler(...)
+conv_handler = ConversationHandler(
+    entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
+    states={
+        profile.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_name)],
+        profile.GENDER: [CallbackQueryHandler(profile.get_gender)],
+        profile.AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, profile.get_age)],
+        profile.STYLE: [CallbackQueryHandler(profile.get_style)]
+    },
+    fallbacks=[CommandHandler("start", start.start)],
+    per_message=False
+)
+app.add_handler(conv_handler)
 
 # ============================================================
 # CallbackQueryHandlerها
@@ -86,11 +98,16 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
 # ============================================================
-# یک MessageHandler واحد برای همه‌ی پیام‌ها
+# MessageRouter - فقط زمانی که ConversationHandler فعال نیست
 # ============================================================
 async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """مسیریابی پیام‌ها بر اساس current_section و حالت ویرایش"""
+    """مسیریابی پیام‌ها - فقط زمانی که کاربر در ConversationHandler نیست"""
     logger.info("🔥 message_router فراخوانی شد!")
+    
+    # اگر ConversationHandler فعال است (ثبت‌نام در حال انجام)، کاری نکن
+    if context.user_data.get('conversation_state'):
+        logger.info("⏭️ ConversationHandler فعال است، عبور از message_router")
+        return
     
     # فقط پیام‌های متنی رو پردازش کن
     if not update.message or not update.message.text:
@@ -137,15 +154,11 @@ app.add_handler(MessageHandler(filters.ALL, message_router))
 app.add_error_handler(error_handler)
 
 # ============================================================
-# دیتابیس و Scheduler - با ریست کامل
+# دیتابیس و Scheduler
 # ============================================================
-logger.info("🗑️ در حال حذف جدول‌های قدیمی...")
-Base.metadata.drop_all(engine)
-logger.info("✅ جدول‌های قدیمی حذف شدند.")
-
-logger.info("🔧 در حال ایجاد جدول‌های جدید...")
+logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
 Base.metadata.create_all(engine)
-logger.info("✅ جدول‌های جدید با مدل به‌روز ایجاد شدند.")
+logger.info("✅ جدول‌ها آماده هستند.")
 
 # راه‌اندازی Scheduler با ارسال app برای دسترسی به bot
 scheduler = start_scheduler(app)
@@ -174,4 +187,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-    )
+)
