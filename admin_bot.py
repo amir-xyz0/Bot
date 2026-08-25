@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -14,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from app.database import engine
 from app.models import User
 import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -27,7 +28,7 @@ ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
 
 if not ADMIN_BOT_TOKEN:
     logger.error("❌ ADMIN_BOT_TOKEN تنظیم نشده!")
-    exit(1)
+    sys.exit(1)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
@@ -53,9 +54,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔍 جستجوی کاربر", callback_data="search_user")]
     ]
     await update.message.reply_text(
-        "🤖 **پنل مدیریت**\n\n"
+        "🤖 **پنل مدیریت ربات همراه**\n\n"
         "سلام ادمین عزیز! 👋\n"
-        "از اینجا ربات رو مدیریت کن.",
+        "از اینجا می‌تونی ربات رو مدیریت کنی.\n\n"
+        "انتخاب کن:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -211,7 +213,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['broadcast_mode'] = False
         keyboard = [[InlineKeyboardButton("🔙 پنل", callback_data="back")]]
         await update.message.reply_text(
-            f"✅ **نتیجه ارسال:**\n\n✅ موفق: {success}\n❌ ناموفق: {fail}",
+            f"✅ **نتیجه:**\nموفق: {success}\nناموفق: {fail}",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     except Exception as e:
@@ -249,11 +251,11 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
             users = db.query(User).filter(User.preferred_name.ilike(f"%{search}%")).all()
         
         if not users:
-            await update.message.reply_text("🔍 کاربری پیدا نشد.")
+            await update.message.reply_text("🔍 پیدا نشد.")
             context.user_data['search_mode'] = False
             return
         
-        text = "🔍 **نتیجه جستجو:**\n\n"
+        text = "🔍 **نتیجه:**\n\n"
         for user in users[:5]:
             created = user.created_at.strftime('%Y/%m/%d') if user.created_at else 'نامشخص'
             text += f"👤 {user.preferred_name}\n🆔 {user.user_id}\n📅 {created}\n{'─'*20}\n"
@@ -282,7 +284,6 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ============================================================
 def main():
     """راه‌اندازی ربات ادمین"""
     try:
