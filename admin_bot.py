@@ -382,8 +382,7 @@ def main():
             listen="0.0.0.0",
             port=port,
             url_path=ADMIN_BOT_TOKEN,
-            webhook_url=webhook_url,
-            secret_token=os.getenv("WEBHOOK_SECRET", None)  # اختیاری برای امنیت
+            webhook_url=webhook_url
         )
         
     except Exception as e:
