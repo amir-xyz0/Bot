@@ -1,4 +1,6 @@
 import logging
+import os
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.database import SessionLocal
@@ -6,21 +8,16 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
-# States
 NAME, GENDER, AGE, STYLE = range(4)
 
 async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
-    # تنظیم state برای ConversationHandler
     context.user_data['conversation_state'] = True
-    
     try:
         await query.message.delete()
     except:
         pass
-    
     msg = await query.message.reply_text(
         "📝 **ثبت‌نام**\n\n"
         "به ربات همراه و مشاوره شخصی خوش آمدی!\n"
@@ -32,21 +29,17 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     name = update.message.text
-    
     try:
         await update.message.delete()
     except:
         pass
-    
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
             await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
     except:
         pass
-    
     context.user_data['preferred_name'] = name
-    
     keyboard = [
         [InlineKeyboardButton("👨 مرد", callback_data="gender_male")],
         [InlineKeyboardButton("👩 زن", callback_data="gender_female")]
@@ -64,16 +57,13 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = update.effective_user.id
     gender = query.data.split("_")[1]
-    
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
             await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
     except:
         pass
-    
     context.user_data['gender'] = gender
-    
     msg = await query.message.reply_text(
         "📅 **سن خود را وارد کن:**\n\n"
         "(فقط عدد وارد کن، مثلاً ۲۵)"
@@ -84,26 +74,21 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     age_text = update.message.text
-    
     try:
         await update.message.delete()
     except:
         pass
-    
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
             await context.bot.delete_message(chat_id=user_id, message_id=last_msg_id)
     except:
         pass
-    
     if not age_text.isdigit():
         msg = await update.message.reply_text("❌ لطفاً یک عدد معتبر وارد کن.")
         context.user_data['last_bot_message_id'] = msg.message_id
         return AGE
-    
     context.user_data['age'] = int(age_text)
-    
     keyboard = [
         [InlineKeyboardButton("🤗 دوستانه", callback_data="style_friendly")],
         [InlineKeyboardButton("🧐 رسمی", callback_data="style_formal")],
@@ -123,7 +108,6 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = update.effective_user.id
     style = query.data.split("_")[1]
-    
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
@@ -148,14 +132,31 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
         logger.info(f"✅ کاربر {user_id} ثبت‌نام کرد.")
         
-        # پاک کردن conversation_state
-        context.user_data['conversation_state'] = False
+        # 🔥 ارسال اعلان به ادمین
+        try:
+            admin_id = os.getenv("ADMIN_USER_ID")
+            if admin_id:
+                total = db.query(User).count()
+                admin_text = (
+                    f"✅ **کاربر جدید ثبت‌نام کرد!**\n\n"
+                    f"👤 نام: {user.preferred_name}\n"
+                    f"🆔 آیدی: {user.user_id}\n"
+                    f"📅 تاریخ: {datetime.now().strftime('%Y/%m/%d %H:%M')}\n"
+                    f"🎭 سبک: {user.chat_style}\n"
+                    f"📊 کل کاربران: {total}"
+                )
+                await context.bot.send_message(
+                    chat_id=int(admin_id),
+                    text=admin_text
+                )
+        except Exception as e:
+            logger.error(f"❌ خطا در ارسال اعلان به ادمین: {e}")
         
+        context.user_data['conversation_state'] = False
         try:
             await query.message.delete()
         except:
             pass
-        
         keyboard = [[InlineKeyboardButton("🏠 رفتن به خانه", callback_data="main_menu")]]
         await query.message.reply_text(
             "✅ **ثبت‌نام شما با موفقیت کامل شد!**\n\n"
@@ -168,6 +169,5 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("❌ خطایی در ثبت‌نام رخ داد. لطفاً دوباره /start را بزنید.")
     finally:
         db.close()
-    
     context.user_data.clear()
     return -1
