@@ -12,7 +12,8 @@ class User(Base):
     age = Column(Integer, nullable=True)
     chat_style = Column(String, default="friendly")
     notifications = Column(Boolean, default=True)
-    morning_msg_enabled = Column(Boolean, default=True)  # 🔥 اضافه شد
+    morning_msg_enabled = Column(Boolean, default=True)  # 🌅 اعلان صبح
+    night_msg_enabled = Column(Boolean, default=True)   # 🌙 اعلان شب - جدید
     personality_profile = Column(JSON, nullable=True)
     mood_history = Column(JSON, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
