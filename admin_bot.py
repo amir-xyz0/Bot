@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -14,8 +13,6 @@ from telegram.ext import (
 from sqlalchemy.orm import sessionmaker
 from app.database import engine
 from app.models import User
-import warnings
-warnings.filterwarnings("ignore")
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -28,7 +25,7 @@ ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
 
 if not ADMIN_BOT_TOKEN:
     logger.error("❌ ADMIN_BOT_TOKEN تنظیم نشده!")
-    sys.exit(1)
+    exit(1)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
@@ -54,10 +51,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔍 جستجوی کاربر", callback_data="search_user")]
     ]
     await update.message.reply_text(
-        "🤖 **پنل مدیریت ربات همراه**\n\n"
+        "🤖 **پنل مدیریت**\n\n"
         "سلام ادمین عزیز! 👋\n"
-        "از اینجا می‌تونی ربات رو مدیریت کنی.\n\n"
-        "انتخاب کن:",
+        "از اینجا ربات رو مدیریت کن.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -206,8 +202,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"📢 **پیام از ادمین:**\n\n{message_text}"
                 )
                 success += 1
-            except Exception as e:
-                logger.error(f"❌ ارسال به {user.user_id}: {e}")
+            except:
                 fail += 1
         
         context.user_data['broadcast_mode'] = False
@@ -286,29 +281,25 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """راه‌اندازی ربات ادمین"""
-    try:
-        application = Application.builder().token(ADMIN_BOT_TOKEN).build()
-        
-        application.add_handler(CommandHandler("start", start))
-        
-        application.add_handler(CallbackQueryHandler(stats, pattern="stats"))
-        application.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
-        application.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
-        application.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
-        application.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
-        application.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
-        application.add_handler(CallbackQueryHandler(back, pattern="back"))
-        
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
-        
-        application.add_error_handler(error_handler)
-        
-        logger.info("🚀 ربات ادمین راه‌اندازی شد!")
-        application.run_polling()
-    except Exception as e:
-        logger.error(f"❌ خطا در راه‌اندازی: {e}")
-        raise
+    application = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    
+    application.add_handler(CallbackQueryHandler(stats, pattern="stats"))
+    application.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
+    application.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
+    application.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
+    application.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
+    application.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
+    application.add_handler(CallbackQueryHandler(back, pattern="back"))
+    
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
+    
+    application.add_error_handler(error_handler)
+    
+    logger.info("🚀 ربات ادمین راه‌اندازی شد!")
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
