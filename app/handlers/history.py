@@ -13,6 +13,13 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     mood = query.data.split("_")[1]
     
+    mood_map = {
+        "good": "😊 خوب",
+        "neutral": "😐 معمولی",
+        "bad": "😔 بد"
+    }
+    mood_text = mood_map.get(mood, mood)
+    
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
@@ -26,7 +33,6 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.commit()
             logger.info(f"✅ احساسات کاربر {user_id} ثبت شد: {mood}")
             
-            # حذف پیام قبلی (دکمه‌های انتخاب احساسات)
             try:
                 await query.message.delete()
             except:
@@ -35,7 +41,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
             await query.message.reply_text(
                 f"✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
-                f"حالت امروزت: {mood}",
+                f"حالت امروزت: {mood_text}",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
         else:
@@ -52,7 +58,6 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query:
         await query.answer()
-        # حذف پیام قبلی (منوی اصلی یا پیام قبلی)
         try:
             await query.message.delete()
         except:
@@ -78,8 +83,20 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        history = user.mood_history[-30:]  # 30 مورد آخر
+        history = user.mood_history[-30:]
         text = "📋 **تاریخچه احساسات شما:**\n\n"
+        mood_emoji = {
+            "good": "😊",
+            "happy": "😄",
+            "neutral": "😐",
+            "bad": "😔",
+            "sad": "😢",
+            "angry": "😡",
+            "excited": "🤩",
+            "tired": "😴",
+            "anxious": "😰"
+        }
+        
         for item in reversed(history):
             mood = item.get("mood", "نامشخص")
             date = item.get("date", "")
@@ -92,18 +109,6 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 date_str = "نامشخص"
             
-            # ایموجی مناسب برای هر حالت
-            mood_emoji = {
-                "good": "😊",
-                "happy": "😄",
-                "neutral": "😐",
-                "bad": "😔",
-                "sad": "😢",
-                "angry": "😡",
-                "excited": "🤩",
-                "tired": "😴",
-                "anxious": "😰"
-            }
             emoji = mood_emoji.get(mood, "🤔")
             text += f"{emoji} **{mood}** - {date_str}\n"
         
