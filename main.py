@@ -137,11 +137,15 @@ app.add_handler(MessageHandler(filters.ALL, message_router))
 app.add_error_handler(error_handler)
 
 # ============================================================
-# دیتابیس و Scheduler
+# دیتابیس و Scheduler - با ریست کامل
 # ============================================================
-logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
+logger.info("🗑️ در حال حذف جدول‌های قدیمی...")
+Base.metadata.drop_all(engine)
+logger.info("✅ جدول‌های قدیمی حذف شدند.")
+
+logger.info("🔧 در حال ایجاد جدول‌های جدید...")
 Base.metadata.create_all(engine)
-logger.info("✅ جدول‌ها آماده هستند.")
+logger.info("✅ جدول‌های جدید با مدل به‌روز ایجاد شدند.")
 
 # راه‌اندازی Scheduler با ارسال app برای دسترسی به bot
 scheduler = start_scheduler(app)
