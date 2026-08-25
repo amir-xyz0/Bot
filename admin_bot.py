@@ -38,9 +38,6 @@ if not ADMIN_BOT_TOKEN:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
 
-# ============================================================
-# هندلر خطا
-# ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -49,9 +46,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ============================================================
-# شروع
-# ============================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_USER_ID:
@@ -71,13 +65,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ============================================================
-# آمار
-# ============================================================
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
-        await query.answer()  # ← اول پاسخ بده
+        await query.answer()
     except Exception as e:
         logger.warning(f"⚠️ خطا در answer: {e}")
         return
@@ -116,9 +107,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# لیست کامل کاربران
-# ============================================================
 async def all_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -204,9 +192,6 @@ async def users_prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['user_list_page'] = page - 1
     await show_users_page(update, context)
 
-# ============================================================
-# پیام عمومی
-# ============================================================
 async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -263,9 +248,6 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# جستجو
-# ============================================================
 async def search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -318,9 +300,6 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# بازگشت
-# ============================================================
 async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -343,7 +322,7 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ============================================================
 def main():
-    """راه‌اندازی ربات ادمین"""
+    """راه‌اندازی ربات ادمین با پاک کردن Webhook"""
     try:
         application = Application.builder().token(ADMIN_BOT_TOKEN).build()
         
@@ -362,7 +341,20 @@ def main():
         application.add_error_handler(error_handler)
         
         logger.info("🚀 ربات ادمین راه‌اندازی شد!")
-        application.run_polling()
+        
+        # 🔥 مهم: پاک کردن Webhook قبل از شروع Polling
+        async def start_bot():
+            try:
+                await application.bot.delete_webhook()
+                logger.info("✅ Webhook پاک شد.")
+            except Exception as e:
+                logger.warning(f"⚠️ خطا در پاک کردن Webhook: {e}")
+            await application.start()
+            await application.run_polling(drop_pending_updates=True)
+        
+        import asyncio
+        asyncio.run(start_bot())
+        
     except Exception as e:
         logger.error(f"❌ خطا در راه‌اندازی: {e}")
         raise
