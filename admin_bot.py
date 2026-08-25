@@ -4,14 +4,12 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-# تنظیمات پایه
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# ایمپورت‌های اصلی
 try:
     from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
     from telegram.ext import (
@@ -30,7 +28,6 @@ from sqlalchemy.orm import sessionmaker
 from app.database import engine
 from app.models import User
 
-# تنظیمات
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
 
@@ -42,7 +39,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
 
 # ============================================================
-# هندلرها
+# هندلر خطا
 # ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
@@ -52,6 +49,9 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
+# ============================================================
+# شروع
+# ============================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_USER_ID:
@@ -71,9 +71,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+# ============================================================
+# آمار
+# ============================================================
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()  # ← اول پاسخ بده
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
+    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
@@ -108,9 +116,17 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
+# ============================================================
+# لیست کامل کاربران
+# ============================================================
 async def all_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
+    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
@@ -118,6 +134,7 @@ async def all_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_users_page(update, context)
 
 async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
     page = context.user_data.get('user_list_page', 0)
     db = SessionLocal()
     try:
@@ -133,7 +150,7 @@ async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users = db.query(User).order_by(User.created_at.desc()).offset(page * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE).all()
         
         if not users:
-            await update.callback_query.edit_message_text("📭 کاربری ثبت‌نام نکرده.")
+            await query.edit_message_text("📭 کاربری ثبت‌نام نکرده.")
             return
         
         text = f"📋 **لیست کاربران (صفحه {page+1} از {total_pages}):**\n\n"
@@ -158,30 +175,46 @@ async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append(nav_buttons)
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل", callback_data="back")])
         
-        await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logger.error(f"❌ خطا: {e}")
-        await update.callback_query.edit_message_text(f"❌ خطا: {e}")
+        await query.edit_message_text(f"❌ خطا: {e}")
     finally:
         db.close()
 
 async def users_next(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
     page = context.user_data.get('user_list_page', 0)
     context.user_data['user_list_page'] = page + 1
     await show_users_page(update, context)
 
 async def users_prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
     page = context.user_data.get('user_list_page', 0)
     context.user_data['user_list_page'] = page - 1
     await show_users_page(update, context)
 
+# ============================================================
+# پیام عمومی
+# ============================================================
 async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
+    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
@@ -230,9 +263,17 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
+# ============================================================
+# جستجو
+# ============================================================
 async def search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
+    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
@@ -277,9 +318,16 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
+# ============================================================
+# بازگشت
+# ============================================================
 async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در answer: {e}")
+        return
     context.user_data.clear()
     keyboard = [
         [InlineKeyboardButton("📊 آمار", callback_data="stats")],
