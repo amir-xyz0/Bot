@@ -1,35 +1,49 @@
+#!/usr/bin/env python3
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    MessageHandler,
-    filters,
-    ContextTypes
-)
-from sqlalchemy.orm import sessionmaker
-from app.database import engine
-from app.models import User
 
+# تنظیمات پایه
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
+# ایمپورت‌های اصلی
+try:
+    from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+    from telegram.ext import (
+        Application,
+        CommandHandler,
+        CallbackQueryHandler,
+        MessageHandler,
+        filters,
+        ContextTypes
+    )
+except Exception as e:
+    logger.error(f"❌ خطا در ایمپورت telegram: {e}")
+    sys.exit(1)
+
+from sqlalchemy.orm import sessionmaker
+from app.database import engine
+from app.models import User
+
+# تنظیمات
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
 
 if not ADMIN_BOT_TOKEN:
     logger.error("❌ ADMIN_BOT_TOKEN تنظیم نشده!")
-    exit(1)
+    sys.exit(1)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
 
+# ============================================================
+# هندلرها
+# ============================================================
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -279,27 +293,31 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+# ============================================================
 def main():
     """راه‌اندازی ربات ادمین"""
-    application = Application.builder().token(ADMIN_BOT_TOKEN).build()
-    
-    application.add_handler(CommandHandler("start", start))
-    
-    application.add_handler(CallbackQueryHandler(stats, pattern="stats"))
-    application.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
-    application.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
-    application.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
-    application.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
-    application.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
-    application.add_handler(CallbackQueryHandler(back, pattern="back"))
-    
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
-    
-    application.add_error_handler(error_handler)
-    
-    logger.info("🚀 ربات ادمین راه‌اندازی شد!")
-    application.run_polling()
+    try:
+        application = Application.builder().token(ADMIN_BOT_TOKEN).build()
+        
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CallbackQueryHandler(stats, pattern="stats"))
+        application.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
+        application.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
+        application.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
+        application.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
+        application.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
+        application.add_handler(CallbackQueryHandler(back, pattern="back"))
+        
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
+        
+        application.add_error_handler(error_handler)
+        
+        logger.info("🚀 ربات ادمین راه‌اندازی شد!")
+        application.run_polling()
+    except Exception as e:
+        logger.error(f"❌ خطا در راه‌اندازی: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
