@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -9,7 +10,6 @@ from telegram.ext import (
     filters,
     ContextTypes
 )
-from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from app.database import engine
 from app.models import User
@@ -20,7 +20,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# توکن ربات ادمین
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
 
@@ -31,8 +30,6 @@ if not ADMIN_BOT_TOKEN:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
 
-# ============================================================
-# تابع اصلی
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -41,8 +38,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ============================================================
-# شروع
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_USER_ID:
@@ -56,15 +51,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔍 جستجوی کاربر", callback_data="search_user")]
     ]
     await update.message.reply_text(
-        "🤖 **پنل مدیریت ربات همراه**\n\n"
+        "🤖 **پنل مدیریت**\n\n"
         "سلام ادمین عزیز! 👋\n"
-        "از اینجا می‌تونی ربات رو مدیریت کنی.\n\n"
-        "انتخاب کن:",
+        "از اینجا ربات رو مدیریت کن.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ============================================================
-# آمار
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -75,7 +67,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = SessionLocal()
     try:
         total = db.query(User).count()
-        from datetime import timedelta
         week_ago = datetime.now() - timedelta(days=7)
         active = 0
         users = db.query(User).all()
@@ -103,8 +94,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# لیست کامل کاربران
 async def all_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -176,8 +165,6 @@ async def users_prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['user_list_page'] = page - 1
     await show_users_page(update, context)
 
-# ============================================================
-# پیام عمومی
 async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -229,8 +216,6 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# جستجو
 async def search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -278,8 +263,6 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# بازگشت
 async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -297,27 +280,27 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================================
-# ساخت اپلیکیشن و ثبت هندلرها
 def main():
-    app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    """راه‌اندازی ربات ادمین"""
+    application = Application.builder().token(ADMIN_BOT_TOKEN).build()
     
-    app.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("start", start))
     
-    app.add_handler(CallbackQueryHandler(stats, pattern="stats"))
-    app.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
-    app.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
-    app.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
-    app.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
-    app.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
-    app.add_handler(CallbackQueryHandler(back, pattern="back"))
+    application.add_handler(CallbackQueryHandler(stats, pattern="stats"))
+    application.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
+    application.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
+    application.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
+    application.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
+    application.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
+    application.add_handler(CallbackQueryHandler(back, pattern="back"))
     
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
     
-    app.add_error_handler(error_handler)
+    application.add_error_handler(error_handler)
     
     logger.info("🚀 ربات ادمین راه‌اندازی شد!")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_polling(allowed_updates=["message", "callback_query"])
 
 if __name__ == "__main__":
     main()
