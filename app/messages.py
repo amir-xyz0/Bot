@@ -1,50 +1,66 @@
+import json
+import os
 import random
 
-MORNING_MESSAGES_MALE = [
-    "پاشو پسر، روزتو بساز! هیچکس قرار نیست نجاتت بده، فقط خودت می‌تونی.",
-    "صبح بخیر جنگجو! امروز روزیه که می‌تونی به خودت ثابت کنی چقدر قدرتمندی.",
-    "بلند شو و به آینه نگاه کن. اون شخصی که می‌بینی می‌تونه هر چیزی که می‌خواد باشه.",
-    "دنیا منتظر کارهای بزرگ توست. پاشو و شروع کن.",
-    "صبح بخیر! یادت باشه امروز یه فرصت جدید برای ساختن بهترین نسخه از خودته.",
-    "پاشو پسر، زندگی منتظر تو نیست. برو و روزتو بگیر.",
-    "هر روز صبح یه صفحه‌ی خالیست. قلم به دست بگیر و بهترین داستان رو بنویس.",
-]
+# مسیر پوشه data
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
-MORNING_MESSAGES_FEMALE = [
-    "پاشو دختر، روزت رو بساز! هیچکس قرار نیست نجاتت بده، فقط خودت می‌تونی.",
-    "صبح بخیر ملکه! امروز روزیه که می‌تونی به خودت ثابت کنی چقدر قدرتمندی.",
-    "بلند شو و به آینه نگاه کن. اون شخصی که می‌بینی می‌تونه هر چیزی که می‌خواد باشه.",
-    "دنیا منتظر کارهای بزرگ توست. پاشو و شروع کن.",
-    "صبح بخیر! یادت باشه امروز یه فرصت جدید برای ساختن بهترین نسخه از خودته.",
-    "پاشو دختر، زندگی منتظر تو نیست. برو و روزتو بگیر.",
-    "هر روز صبح یه صفحه‌ی خالیست. قلم به دست بگیر و بهترین داستان رو بنویس.",
-]
+def load_json_file(filename):
+    """بارگذاری فایل JSON از پوشه data"""
+    file_path = os.path.join(DATA_DIR, filename)
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"⚠️ فایل {filename} پیدا نشد!")
+        return None
+    except json.JSONDecodeError:
+        print(f"⚠️ فایل {filename} معتبر نیست!")
+        return None
 
-NIGHT_MESSAGES = [
-    "شب بخیر! امروز هرچقدر هم سخت بود، تو ایستادگی کردی و این قابل تحسینه.",
-    "زمان استراحته. فردا روز جدیدی برای شروع دوباره‌ست.",
-    "شب بخیر! به خودت افتخار کن چون امروز بهترین خودت بودی.",
-    "خوابت آرام، فردا روز بهتری خواهد بود.",
-    "شب بخیر! یادت باشه هر روز که می‌گذره، بهت نزدیک‌تر میشی.",
-    "امروز گذشت، مهم نیست چی شد. فردا رو با انرژی جدید شروع کن.",
-]
+def get_morning_message(name='عزیز'):
+    """دریافت پیام صبح با نام کاربر"""
+    data = load_json_file('morning_messages.json')
+    if data and 'text' in data:
+        return data['text'].format(name=name)
+    return f"🌅 صبح بخیر {name}!"
 
-ABSENT_MESSAGES = [
-    "سلام رفیق، چند روزی نبودی. نگرانت شدم. اگه روزای سختی رو می‌گذرونی، قوی بمون و اگه کمکی از دستم برمیاد، حتماً بهم بگو.",
-    "دلم برات تنگ شده بود. خوبی؟ فقط خواستم بدونم حالت چطوره.",
-    "هی دوست، چند روزه خبری ازت نیست. امیدوارم همه‌چیز خوب باشه. منتظرتم.",
-    "سلام! چند روزه که نیستی اگه یه جایی گرفتار شدی یا نیاز به کمک داری، من اینجام تا گوش بدم.",
-    "دلتنگت شدم رفیق. فقط خواستم بدونم زنده‌ای و خوبی!",
-]
+def get_night_message(name='عزیز'):
+    """دریافت پیام شب با نام کاربر"""
+    data = load_json_file('night_messages.json')
+    if data and 'text' in data:
+        return data['text'].format(name=name)
+    return f"🌙 شب بخیر {name}!"
 
-def get_morning_message(gender):
-    if gender == "male":
-        return random.choice(MORNING_MESSAGES_MALE)
-    else:
-        return random.choice(MORNING_MESSAGES_FEMALE)
+def get_random_motivational():
+    """دریافت یک پیام انگیزشی رندم"""
+    data = load_json_file('motivational_messages.json')
+    if data and isinstance(data, list) and len(data) > 0:
+        return random.choice(data)
+    return "🌟 امروز روز خوبی برات آرزو میکنم!"
 
-def get_night_message():
-    return random.choice(NIGHT_MESSAGES)
+def get_random_health_message():
+    """دریافت یک پیام سلامتی رندم از فایل health_messages.py"""
+    try:
+        from app.data.health_messages import health_messages
+        if health_messages and len(health_messages) > 0:
+            return random.choice(health_messages)
+        else:
+            return "🧘 مراقب سلامتیت باش و به خودت برس."
+    except ImportError:
+        return "🧘 مراقب سلامتیت باش و به خودت برس."
+    except Exception as e:
+        print(f"⚠️ خطا در دریافت پیام سلامتی: {e}")
+        return "🧘 مراقب سلامتیت باش و به خودت برس."
 
-def get_absent_message():
-    return random.choice(ABSENT_MESSAGES)
+# پیام ثبت احساسات (ثابت در کد)
+MOOD_REQUEST_MESSAGE = (
+    "📝 **ثبت احساسات امروزت:**\n\n"
+    "چطور بود امروز؟\n"
+    "روزت رو چطور ارزیابی می‌کنی؟"
+)
+
+MOOD_THANK_MESSAGE = (
+    "✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
+    "حالت امروزت: {}"
+)
