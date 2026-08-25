@@ -2,7 +2,7 @@ import logging
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder,
+    Application,
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
@@ -10,11 +10,9 @@ from telegram.ext import (
     ContextTypes
 )
 from datetime import datetime
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.config import config
-from app.models import User
 from app.database import engine
+from app.models import User
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -22,6 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# توکن ربات ادمین
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 0))
 
@@ -30,10 +29,10 @@ if not ADMIN_BOT_TOKEN:
     exit(1)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# تعداد کاربران در هر صفحه
 ITEMS_PER_PAGE = 5
 
+# ============================================================
+# تابع اصلی
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -42,14 +41,10 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-app = ApplicationBuilder().token(ADMIN_BOT_TOKEN).build()
-
 # ============================================================
-# CommandHandler
-# ============================================================
+# شروع
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
     if user_id != ADMIN_USER_ID:
         await update.message.reply_text("⛔ شما دسترسی به این ربات ندارید.")
         return
@@ -69,12 +64,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================================
-# آمار کاربران
-# ============================================================
+# آمار
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
@@ -82,8 +75,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = SessionLocal()
     try:
         total = db.query(User).count()
-        
-        # کاربران فعال (کسانی که در ۷ روز گذشته احساسات ثبت کردن)
         from datetime import timedelta
         week_ago = datetime.now() - timedelta(days=7)
         active = 0
@@ -103,7 +94,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📊 **آمار کاربران**\n\n"
             f"👥 کل کاربران: {total}\n"
             f"✅ فعال‌های هفته اخیر: {active}\n"
-            f"📅 آخرین بروزرسانی: {datetime.now().strftime('%Y/%m/%d %H:%M')}"
+            f"📅 {datetime.now().strftime('%Y/%m/%d %H:%M')}"
         )
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="back")]]
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -113,23 +104,18 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
 
 # ============================================================
-# لیست کامل کاربران با صفحه‌بندی
-# ============================================================
+# لیست کامل کاربران
 async def all_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
-    
     context.user_data['user_list_page'] = 0
     await show_users_page(update, context)
 
 async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش صفحه مشخص از لیست کاربران"""
     page = context.user_data.get('user_list_page', 0)
-    
     db = SessionLocal()
     try:
         total_users = db.query(User).count()
@@ -137,11 +123,9 @@ async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if page >= total_pages:
             page = total_pages - 1
-            context.user_data['user_list_page'] = page
-        
         if page < 0:
             page = 0
-            context.user_data['user_list_page'] = page
+        context.user_data['user_list_page'] = page
         
         users = db.query(User).order_by(User.created_at.desc()).offset(page * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE).all()
         
@@ -161,74 +145,56 @@ async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"   {'─' * 15}\n"
             )
         
-        # دکمه‌های صفحه‌بندی
         keyboard = []
         nav_buttons = []
-        
         if page > 0:
             nav_buttons.append(InlineKeyboardButton("⬅️ قبلی", callback_data="users_prev"))
         if page < total_pages - 1:
             nav_buttons.append(InlineKeyboardButton("➡️ بعدی", callback_data="users_next"))
-        
         if nav_buttons:
             keyboard.append(nav_buttons)
-        
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل", callback_data="back")])
         
-        if update.callback_query:
-            await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logger.error(f"❌ خطا: {e}")
-        if update.callback_query:
-            await update.callback_query.edit_message_text(f"❌ خطا: {e}")
-        else:
-            await update.message.reply_text(f"❌ خطا: {e}")
+        await update.callback_query.edit_message_text(f"❌ خطا: {e}")
     finally:
         db.close()
 
 async def users_next(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """رفتن به صفحه بعدی"""
     query = update.callback_query
     await query.answer()
-    
     page = context.user_data.get('user_list_page', 0)
     context.user_data['user_list_page'] = page + 1
     await show_users_page(update, context)
 
 async def users_prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """رفتن به صفحه قبلی"""
     query = update.callback_query
     await query.answer()
-    
     page = context.user_data.get('user_list_page', 0)
     context.user_data['user_list_page'] = page - 1
     await show_users_page(update, context)
 
 # ============================================================
-# ارسال پیام عمومی
-# ============================================================
+# پیام عمومی
 async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
-    
     context.user_data['broadcast_mode'] = True
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="back")]]
     await query.edit_message_text(
         "📨 **ارسال پیام عمومی**\n\n"
-        "پیام خود را بنویسید (متن یا فایل):",
+        "پیام خود را بنویسید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get('broadcast_mode'):
         return
-    
     if update.effective_user.id != ADMIN_USER_ID:
         return
     
@@ -236,16 +202,12 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = SessionLocal()
     try:
         users = db.query(User).all()
-        
         if not users:
             await update.message.reply_text("📭 هیچ کاربری ثبت‌نام نکرده.")
             return
         
         await update.message.reply_text(f"⏳ ارسال به {len(users)} کاربر...")
-        
-        success = 0
-        fail = 0
-        
+        success, fail = 0, 0
         for user in users:
             try:
                 await context.bot.send_message(
@@ -253,16 +215,13 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"📢 **پیام از ادمین:**\n\n{message_text}"
                 )
                 success += 1
-            except Exception as e:
-                logger.error(f"❌ ارسال به {user.user_id}: {e}")
+            except:
                 fail += 1
         
         context.user_data['broadcast_mode'] = False
-        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل", callback_data="back")]]
+        keyboard = [[InlineKeyboardButton("🔙 پنل", callback_data="back")]]
         await update.message.reply_text(
-            f"✅ **نتیجه ارسال:**\n\n"
-            f"✅ موفق: {success}\n"
-            f"❌ ناموفق: {fail}",
+            f"✅ **نتیجه:**\nموفق: {success}\nناموفق: {fail}",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     except Exception as e:
@@ -271,62 +230,48 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
 
 # ============================================================
-# جستجوی کاربر
-# ============================================================
+# جستجو
 async def search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     if update.effective_user.id != ADMIN_USER_ID:
         await query.edit_message_text("⛔ دسترسی ندارید.")
         return
-    
     context.user_data['search_mode'] = True
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="back")]]
     await query.edit_message_text(
         "🔍 **جستجوی کاربر**\n\n"
-        "نام کاربر یا آیدی عددی را وارد کنید:",
+        "نام یا آیدی عددی را وارد کن:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get('search_mode'):
         return
-    
     if update.effective_user.id != ADMIN_USER_ID:
         return
     
-    search_text = update.message.text.strip()
+    search = update.message.text.strip()
     db = SessionLocal()
     try:
-        if search_text.isdigit():
-            user = db.query(User).filter_by(user_id=int(search_text)).first()
+        if search.isdigit():
+            user = db.query(User).filter_by(user_id=int(search)).first()
             users = [user] if user else []
         else:
-            users = db.query(User).filter(
-                User.preferred_name.ilike(f"%{search_text}%")
-            ).all()
+            users = db.query(User).filter(User.preferred_name.ilike(f"%{search}%")).all()
         
         if not users:
-            await update.message.reply_text("🔍 کاربری پیدا نشد.")
+            await update.message.reply_text("🔍 پیدا نشد.")
             context.user_data['search_mode'] = False
             return
         
-        text = "🔍 **نتیجه جستجو:**\n\n"
-        for user in users[:10]:
-            created = user.created_at.strftime('%Y/%m/%d %H:%M') if user.created_at else 'نامشخص'
-            moods = len(user.mood_history) if user.mood_history else 0
-            text += (
-                f"👤 **{user.preferred_name}**\n"
-                f"🆔 {user.user_id}\n"
-                f"📅 ثبت‌نام: {created}\n"
-                f"🎭 سبک: {user.chat_style}\n"
-                f"📊 احساسات: {moods} مورد\n"
-                f"{'─' * 20}\n"
-            )
+        text = "🔍 **نتیجه:**\n\n"
+        for user in users[:5]:
+            created = user.created_at.strftime('%Y/%m/%d') if user.created_at else 'نامشخص'
+            text += f"👤 {user.preferred_name}\n🆔 {user.user_id}\n📅 {created}\n{'─'*20}\n"
         
         context.user_data['search_mode'] = False
-        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل", callback_data="back")]]
+        keyboard = [[InlineKeyboardButton("🔙 پنل", callback_data="back")]]
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         await update.message.reply_text(f"❌ خطا: {e}")
@@ -335,12 +280,10 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ============================================================
 # بازگشت
-# ============================================================
 async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data.clear()
-    
     keyboard = [
         [InlineKeyboardButton("📊 آمار", callback_data="stats")],
         [InlineKeyboardButton("📋 لیست کامل کاربران", callback_data="all_users")],
@@ -354,27 +297,27 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================================
-# ثبت هندلرها
-# ============================================================
-app.add_handler(CommandHandler("start", start))
+# ساخت اپلیکیشن و ثبت هندلرها
+def main():
+    app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    
+    app.add_handler(CommandHandler("start", start))
+    
+    app.add_handler(CallbackQueryHandler(stats, pattern="stats"))
+    app.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
+    app.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
+    app.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
+    app.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
+    app.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
+    app.add_handler(CallbackQueryHandler(back, pattern="back"))
+    
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
+    
+    app.add_error_handler(error_handler)
+    
+    logger.info("🚀 ربات ادمین راه‌اندازی شد!")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
-app.add_handler(CallbackQueryHandler(stats, pattern="stats"))
-app.add_handler(CallbackQueryHandler(all_users, pattern="all_users"))
-app.add_handler(CallbackQueryHandler(users_next, pattern="users_next"))
-app.add_handler(CallbackQueryHandler(users_prev, pattern="users_prev"))
-app.add_handler(CallbackQueryHandler(broadcast_start, pattern="broadcast"))
-app.add_handler(CallbackQueryHandler(search_user_start, pattern="search_user"))
-app.add_handler(CallbackQueryHandler(back, pattern="back"))
-
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
-
-app.add_error_handler(error_handler)
-
-# ============================================================
-# اجرا
-# ============================================================
 if __name__ == "__main__":
-    port = int(os.environ.get("ADMIN_PORT", 10001))
-    logger.info(f"🚀 ربات ادمین روی پورت {port} راه‌اندازی شد!")
-    app.run_polling()
+    main()
