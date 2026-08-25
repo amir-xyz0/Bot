@@ -1,30 +1,37 @@
 import logging
-from datetime import datetime, time
+import asyncio
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from telegram.ext import ContextTypes
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from app.database import SessionLocal
 from app.models import User
+from app.messages import (
+    get_morning_message,
+    get_night_message,
+    get_random_motivational,
+    get_random_health_message,
+    MOOD_REQUEST_MESSAGE
+)
 
 logger = logging.getLogger(__name__)
 
-# ذخیره context برای دسترسی به bot
 _bot_context = None
 
 def set_bot_context(context):
-    """ذخیره context برای استفاده در jobها"""
     global _bot_context
     _bot_context = context
 
-async def send_message_to_user(user_id, text):
-    """ارسال پیام به کاربر با مدیریت خطا"""
+async def send_message_to_user(user_id, text, reply_markup=None):
     global _bot_context
     if not _bot_context:
         logger.error("❌ context ربات در دسترس نیست!")
         return False
-    
     try:
-        await _bot_context.bot.send_message(chat_id=user_id, text=text)
+        await _bot_context.bot.send_message(
+            chat_id=user_id,
+            text=text,
+            reply_markup=reply_markup
+        )
         logger.info(f"✅ پیام به کاربر {user_id} ارسال شد")
         return True
     except Exception as e:
@@ -32,7 +39,7 @@ async def send_message_to_user(user_id, text):
         return False
 
 async def send_morning_messages():
-    """ارسال پیام صبحگاهی به کاربران"""
+    """ارسال پیام صبح (ساعت ۷) + پیام انگیزشی رندم + پیام سلامت رندم"""
     logger.info("🌅 شروع ارسال پیام‌های صبحگاهی...")
     
     db = SessionLocal()
@@ -45,13 +52,21 @@ async def send_morning_messages():
         logger.info(f"📊 تعداد کاربران با اعلان صبح فعال: {len(users)}")
         
         for user in users:
-            text = (
-                f"🌅 **صبح بخیر {user.preferred_name}!**\n\n"
-                "امروز روز جدیدیه، پر از فرصت‌های تازه.\n"
-                "🌸 امیدوارم روزی پر از آرامش و لحظات خوب داشته باشی.\n\n"
-                "✨ یادت باشه: هر روز یه شروع تازه‌ست."
-            )
-            await send_message_to_user(user.user_id, text)
+            # ۱. پیام صبح بخیر
+            morning_text = get_morning_message(user.preferred_name or 'عزیز')
+            await send_message_to_user(user.user_id, morning_text)
+            
+            # ۲. پیام انگیزشی رندم (با تأخیر ۵ ثانیه)
+            await asyncio.sleep(5)
+            motivational_text = get_random_motivational()
+            await send_message_to_user(user.user_id, motivational_text)
+            
+            # ۳. پیام سلامت رندم (با تأخیر ۵ ثانیه)
+            await asyncio.sleep(5)
+            health_text = get_random_health_message()
+            await send_message_to_user(user.user_id, health_text)
+            
+            logger.info(f"✅ ۳ پیام صبحگاهی به کاربر {user.user_id} ارسال شد")
             
     except Exception as e:
         logger.error(f"❌ خطا در ارسال پیام‌های صبحگاهی: {e}")
@@ -61,12 +76,11 @@ async def send_morning_messages():
     logger.info("✅ ارسال پیام‌های صبحگاهی به پایان رسید.")
 
 async def send_night_messages():
-    """ارسال پیام شبانه به کاربران"""
+    """ارسال پیام شب (ساعت ۲۳) + پیام ثبت احساسات با دکمه"""
     logger.info("🌙 شروع ارسال پیام‌های شبانه...")
     
     db = SessionLocal()
     try:
-        # فقط کاربرانی که اعلان شب فعال دارند
         users = db.query(User).filter(
             User.night_msg_enabled == True,
             User.notifications == True
@@ -75,13 +89,24 @@ async def send_night_messages():
         logger.info(f"📊 تعداد کاربران با اعلان شب فعال: {len(users)}")
         
         for user in users:
-            text = (
-                f"🌙 **شب بخیر {user.preferred_name}!**\n\n"
-                "روزت چطور بود؟ امیدوارم لحظات خوبی داشته باشی.\n"
-                "🌟 فردا روز جدیدیه، پس آروم بگیر و به خودت استراحت بده.\n\n"
-                "💭 یادت باشه: هر شب پایان یه روز و شروع یه رویاست."
+            # ۱. پیام شب بخیر
+            night_text = get_night_message(user.preferred_name or 'عزیز')
+            await send_message_to_user(user.user_id, night_text)
+            
+            # ۲. پیام ثبت احساسات با دکمه‌ها (با تأخیر ۵ ثانیه)
+            await asyncio.sleep(5)
+            keyboard = [
+                [InlineKeyboardButton("😊 خوب", callback_data="mood_good")],
+                [InlineKeyboardButton("😐 معمولی", callback_data="mood_neutral")],
+                [InlineKeyboardButton("😔 بد", callback_data="mood_bad")]
+            ]
+            await send_message_to_user(
+                user.user_id,
+                MOOD_REQUEST_MESSAGE,
+                reply_markup=InlineKeyboardMarkup(keyboard)
             )
-            await send_message_to_user(user.user_id, text)
+            
+            logger.info(f"✅ ۲ پیام شبانه به کاربر {user.user_id} ارسال شد")
             
     except Exception as e:
         logger.error(f"❌ خطا در ارسال پیام‌های شبانه: {e}")
@@ -91,9 +116,8 @@ async def send_night_messages():
     logger.info("✅ ارسال پیام‌های شبانه به پایان رسید.")
 
 async def check_absent_users():
-    """بررسی کاربرانی که مدت‌هست احساسات ثبت نکردن"""
+    """بررسی کاربران غایب"""
     logger.info("🔍 شروع بررسی کاربران غایب...")
-    
     db = SessionLocal()
     try:
         users = db.query(User).all()
@@ -102,7 +126,6 @@ async def check_absent_users():
         logger.error(f"❌ خطا در بررسی کاربران غایب: {e}")
     finally:
         db.close()
-    
     logger.info("✅ بررسی کاربران غایب به پایان رسید.")
 
 def start_scheduler(app=None):
@@ -115,16 +138,16 @@ def start_scheduler(app=None):
     
     scheduler = BackgroundScheduler()
     
-    # پیام صبح: ساعت ۸ صبح
+    # پیام صبح: ساعت ۷ صبح
     scheduler.add_job(
         send_morning_messages,
-        CronTrigger(hour=8, minute=0),
+        CronTrigger(hour=7, minute=0),
         id="morning_job",
         replace_existing=True
     )
-    logger.info("✅ job صبحگاهی تنظیم شد (ساعت ۸:۰۰)")
+    logger.info("✅ job صبحگاهی تنظیم شد (ساعت ۷:۰۰)")
     
-    # پیام شب: ساعت ۱۰ شب
+    # پیام شب: ساعت ۲۳
     scheduler.add_job(
         send_night_messages,
         CronTrigger(hour=23, minute=0),
@@ -133,7 +156,7 @@ def start_scheduler(app=None):
     )
     logger.info("✅ job شبانه تنظیم شد (ساعت ۲۳:۰۰)")
     
-    # بررسی کاربران غایب: هر روز ساعت ۱۲ ظهر
+    # بررسی کاربران غایب: ساعت ۱۲
     scheduler.add_job(
         check_absent_users,
         CronTrigger(hour=12, minute=0),
