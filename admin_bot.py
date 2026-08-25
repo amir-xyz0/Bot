@@ -2,8 +2,26 @@
 import logging
 import os
 import sys
+import threading
 from datetime import datetime, timedelta
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
+# ====== ۱. سرور کوچک برای Health Check ======
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
+
+# ====== ۲. اجرای سرور Health Check در پس‌زمینه ======
+threading.Thread(target=run_health_server, daemon=True).start()
+
+# ====== ۳. بقیه کدهای ربات (دقیقاً مثل قبل) ======
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -38,9 +56,7 @@ if not ADMIN_BOT_TOKEN:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ITEMS_PER_PAGE = 5
 
-# ============================================================
-# هندلر خطا
-# ============================================================
+# ====== ۴. هندلرهای ربات (دقیقاً مثل قبل) ======
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="⚠️ خطا:", exc_info=context.error)
     if update and isinstance(update, Update) and update.effective_message:
@@ -49,9 +65,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ============================================================
-# شروع
-# ============================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_USER_ID:
@@ -71,9 +84,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ============================================================
-# آمار
-# ============================================================
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -116,9 +126,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# لیست کامل کاربران
-# ============================================================
 async def all_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -204,9 +211,6 @@ async def users_prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['user_list_page'] = page - 1
     await show_users_page(update, context)
 
-# ============================================================
-# پیام عمومی
-# ============================================================
 async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -263,9 +267,6 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# جستجو
-# ============================================================
 async def search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -318,9 +319,6 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
 
-# ============================================================
-# بازگشت
-# ============================================================
 async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     try:
@@ -341,9 +339,8 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ============================================================
+# ====== ۵. اجرای اصلی ربات ======
 def main():
-    """راه‌اندازی ربات ادمین"""
     try:
         application = Application.builder().token(ADMIN_BOT_TOKEN).build()
         
@@ -361,9 +358,7 @@ def main():
         
         application.add_error_handler(error_handler)
         
-        logger.info("🚀 ربات ادمین راه‌اندازی شد!")
-        
-        # اجرای استاندارد با drop_pending_updates برای جلوگیری از Conflict
+        logger.info("🚀 ربات ادمین و سرور Health Check راه‌اندازی شد!")
         application.run_polling(drop_pending_updates=True)
         
     except Exception as e:
