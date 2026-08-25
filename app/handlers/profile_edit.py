@@ -34,7 +34,6 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
 
-        # پاک کردن حالت ویرایش و پیام سوال
         context.user_data['editing'] = None
         context.user_data['edit_question_id'] = None
 
@@ -45,6 +44,7 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"سن: {user.age or 'تعیین نشده'}\n"
             f"سبک گفتگو: {user.chat_style or 'تعیین نشده'}\n"
             f"🌅 اعلان صبح: {'✅ فعال' if user.morning_msg_enabled else '❌ غیرفعال'}\n"
+            f"🌙 اعلان شب: {'✅ فعال' if user.night_msg_enabled else '❌ غیرفعال'}\n"
             f"🔔 اعلان‌ها: {'✅ فعال' if user.notifications else '❌ غیرفعال'}"
         )
 
@@ -53,6 +53,8 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("✏️ ویرایش جنسیت", callback_data="edit_gender")],
             [InlineKeyboardButton("✏️ ویرایش سن", callback_data="edit_age")],
             [InlineKeyboardButton("✏️ ویرایش سبک گفتگو", callback_data="edit_style")],
+            [InlineKeyboardButton("🌅 تنظیم اعلان صبح", callback_data="edit_morning")],
+            [InlineKeyboardButton("🌙 تنظیم اعلان شب", callback_data="edit_night")],
             [InlineKeyboardButton("🔔 تنظیم اعلان‌ها", callback_data="edit_notifications")],
             [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
         ]
@@ -68,7 +70,6 @@ async def edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = update.effective_user.id
     
-    # حذف پیام قبلی (پروفایل)
     try:
         await query.message.delete()
     except:
@@ -76,8 +77,6 @@ async def edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data['editing'] = 'name'
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="profile_menu")]]
-    
-    # ذخیره message_id پیام سوال برای حذف بعدی
     msg = await query.message.reply_text(
         "✏️ نام جدید خود را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -85,17 +84,14 @@ async def edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['edit_question_id'] = msg.message_id
 
 async def process_name_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش ویرایش نام - توسط message_router صدا زده میشه"""
     user_id = update.effective_user.id
     new_name = update.message.text.strip()
     
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
     
-    # حذف پیام سوال (✏️ نام جدید خود را وارد کنید:)
     question_id = context.user_data.get('edit_question_id')
     if question_id:
         try:
@@ -110,8 +106,6 @@ async def process_name_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user:
             user.preferred_name = new_name
             db.commit()
-            
-            # پاک کردن حالت ویرایش
             context.user_data['editing'] = None
             
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
@@ -171,7 +165,6 @@ async def edit_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = update.effective_user.id
     
-    # حذف پیام قبلی (پروفایل)
     try:
         await query.message.delete()
     except:
@@ -179,8 +172,6 @@ async def edit_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data['editing'] = 'age'
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="profile_menu")]]
-    
-    # ذخیره message_id پیام سوال برای حذف بعدی
     msg = await query.message.reply_text(
         "✏️ سن خود را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -188,17 +179,14 @@ async def edit_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['edit_question_id'] = msg.message_id
 
 async def process_age_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """پردازش ویرایش سن - توسط message_router صدا زده میشه"""
     user_id = update.effective_user.id
     age_text = update.message.text.strip()
     
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
     
-    # حذف پیام سوال (✏️ سن خود را وارد کنید:)
     question_id = context.user_data.get('edit_question_id')
     if question_id:
         try:
@@ -217,8 +205,6 @@ async def process_age_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user:
             user.age = int(age_text)
             db.commit()
-            
-            # پاک کردن حالت ویرایش
             context.user_data['editing'] = None
             
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
@@ -300,16 +286,65 @@ async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE)
     finally:
         db.close()
 
+async def edit_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """تغییر وضعیت اعلان صبح"""
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+        if user:
+            user.morning_msg_enabled = not user.morning_msg_enabled
+            db.commit()
+            status = "فعال" if user.morning_msg_enabled else "غیرفعال"
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await query.edit_message_text(
+                f"✅ اعلان صبح {status} شد.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await query.edit_message_text("❗ کاربر یافت نشد.")
+    except Exception as e:
+        logger.error(f"❌ خطا: {e}")
+        await query.edit_message_text("❌ خطایی رخ داد.")
+    finally:
+        db.close()
+
+async def edit_night(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """تغییر وضعیت اعلان شب"""
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+        if user:
+            user.night_msg_enabled = not user.night_msg_enabled
+            db.commit()
+            status = "فعال" if user.night_msg_enabled else "غیرفعال"
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
+            await query.edit_message_text(
+                f"✅ اعلان شب {status} شد.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await query.edit_message_text("❗ کاربر یافت نشد.")
+    except Exception as e:
+        logger.error(f"❌ خطا: {e}")
+        await query.edit_message_text("❌ خطایی رخ داد.")
+    finally:
+        db.close()
+
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """بازگشت به پروفایل و پاک کردن حالت ویرایش"""
     query = update.callback_query
     await query.answer()
     
-    # پاک کردن حالت ویرایش و پیام سوال
     context.user_data['editing'] = None
     context.user_data['edit_question_id'] = None
     
-    # حذف پیام فعلی (صفحه ویرایش)
     try:
         await query.message.delete()
     except:
