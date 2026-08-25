@@ -4,3 +4,6 @@ sqlalchemy==1.4.54
 psycopg2-binary==2.9.9
 apscheduler==3.10.4
 requests==2.31.0
+httpx==0.24.1
+httpcore==0.17.3
+typing_extensions==4.8.0
