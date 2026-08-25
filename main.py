@@ -77,6 +77,8 @@ app.add_handler(CallbackQueryHandler(profile_edit.edit_age, pattern="edit_age"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_style, pattern="edit_style"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
+app.add_handler(CallbackQueryHandler(profile_edit.edit_morning, pattern="edit_morning"))
+app.add_handler(CallbackQueryHandler(profile_edit.edit_night, pattern="edit_night"))
 app.add_handler(CallbackQueryHandler(profile_edit.profile_menu, pattern="profile_menu"))
 
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
@@ -140,7 +142,9 @@ app.add_error_handler(error_handler)
 logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
 Base.metadata.create_all(engine)
 logger.info("✅ جدول‌ها آماده هستند.")
-start_scheduler()
+
+# راه‌اندازی Scheduler با ارسال app برای دسترسی به bot
+scheduler = start_scheduler(app)
 
 # ============================================================
 # اجرا با Webhook
