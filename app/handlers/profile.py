@@ -13,7 +13,9 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # حذف پیام قبلی (دکمه شروع ثبت‌نام)
+    # تنظیم state برای ConversationHandler
+    context.user_data['conversation_state'] = True
+    
     try:
         await query.message.delete()
     except:
@@ -24,7 +26,6 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "به ربات همراه و مشاوره شخصی خوش آمدی!\n"
         "برای شروع، لطفاً نام خود را وارد کن:"
     )
-    # ذخیره message_id پیام ربات برای حذف بعدی
     context.user_data['last_bot_message_id'] = msg.message_id
     return NAME
 
@@ -32,13 +33,11 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     name = update.message.text
     
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
     
-    # حذف پیام ربات قبلی (سوال نام)
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
@@ -66,7 +65,6 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     gender = query.data.split("_")[1]
     
-    # حذف پیام ربات قبلی (سوال جنسیت)
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
@@ -87,13 +85,11 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     age_text = update.message.text
     
-    # حذف پیام کاربر
     try:
         await update.message.delete()
     except:
         pass
     
-    # حذف پیام ربات قبلی (سوال سن)
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
@@ -128,7 +124,6 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     style = query.data.split("_")[1]
     
-    # حذف پیام ربات قبلی (سوال سبک)
     try:
         last_msg_id = context.user_data.get('last_bot_message_id')
         if last_msg_id:
@@ -136,7 +131,6 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
     
-    # ذخیره در دیتابیس
     db = SessionLocal()
     try:
         user = User(
@@ -147,13 +141,16 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_style=style,
             notifications=True,
             morning_msg_enabled=True,
+            night_msg_enabled=True,
             mood_history=[]
         )
         db.add(user)
         db.commit()
         logger.info(f"✅ کاربر {user_id} ثبت‌نام کرد.")
         
-        # حذف پیام انتخاب سبک
+        # پاک کردن conversation_state
+        context.user_data['conversation_state'] = False
+        
         try:
             await query.message.delete()
         except:
@@ -172,6 +169,5 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
     
-    # پاک کردن dataهای موقت
     context.user_data.clear()
     return -1
