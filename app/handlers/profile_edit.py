@@ -37,15 +37,20 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['editing'] = None
         context.user_data['edit_question_id'] = None
 
+        # استفاده از getattr برای جلوگیری از خطا در صورت نبودن فیلد
+        morning_enabled = getattr(user, 'morning_msg_enabled', True)
+        night_enabled = getattr(user, 'night_msg_enabled', True)
+        notifications = getattr(user, 'notifications', True)
+
         text = (
             f"👤 **پروفایل شما**\n\n"
             f"نام: {user.preferred_name or 'تعیین نشده'}\n"
             f"جنسیت: {'مرد' if user.gender == 'male' else 'زن' if user.gender == 'female' else 'تعیین نشده'}\n"
             f"سن: {user.age or 'تعیین نشده'}\n"
             f"سبک گفتگو: {user.chat_style or 'تعیین نشده'}\n"
-            f"🌅 اعلان صبح: {'✅ فعال' if user.morning_msg_enabled else '❌ غیرفعال'}\n"
-            f"🌙 اعلان شب: {'✅ فعال' if user.night_msg_enabled else '❌ غیرفعال'}\n"
-            f"🔔 اعلان‌ها: {'✅ فعال' if user.notifications else '❌ غیرفعال'}"
+            f"🌅 اعلان صبح: {'✅ فعال' if morning_enabled else '❌ غیرفعال'}\n"
+            f"🌙 اعلان شب: {'✅ فعال' if night_enabled else '❌ غیرفعال'}\n"
+            f"🔔 اعلان‌ها: {'✅ فعال' if notifications else '❌ غیرفعال'}"
         )
 
         keyboard = [
@@ -61,7 +66,11 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logger.error(f"❌ خطا در نمایش پروفایل: {e}")
-        await message.reply_text("❌ خطایی رخ داد.")
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        await message.reply_text(
+            "❌ خطایی در نمایش پروفایل رخ داد.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     finally:
         db.close()
 
@@ -287,7 +296,6 @@ async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE)
         db.close()
 
 async def edit_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """تغییر وضعیت اعلان صبح"""
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
@@ -313,7 +321,6 @@ async def edit_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
 
 async def edit_night(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """تغییر وضعیت اعلان شب"""
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
@@ -322,7 +329,12 @@ async def edit_night(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
         if user:
-            user.night_msg_enabled = not user.night_msg_enabled
+            # استفاده از getattr برای جلوگیری از خطا
+            if hasattr(user, 'night_msg_enabled'):
+                user.night_msg_enabled = not user.night_msg_enabled
+            else:
+                # اگر فیلد وجود نداشت، یک مقدار پیش‌فرض بذار
+                user.night_msg_enabled = False
             db.commit()
             status = "فعال" if user.night_msg_enabled else "غیرفعال"
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
@@ -333,8 +345,8 @@ async def edit_night(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.edit_message_text("❗ کاربر یافت نشد.")
     except Exception as e:
-        logger.error(f"❌ خطا: {e}")
-        await query.edit_message_text("❌ خطایی رخ داد.")
+        logger.error(f"❌ خطا در ویرایش اعلان شب: {e}")
+        await query.edit_message_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
     finally:
         db.close()
 
