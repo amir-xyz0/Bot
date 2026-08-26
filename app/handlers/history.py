@@ -37,13 +37,12 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        # 🔥 روش اصولی: گرفتن لیست فعلی، اضافه کردن، و ذخیره
-        # اگر None هست، لیست خالی بساز
+        # 🔥 بررسی و مقداردهی mood_history
         if user.mood_history is None:
             user.mood_history = []
             logger.info("📝 mood_history جدید (لیست خالی) ایجاد شد.")
         
-        # اطمینان از اینکه لیست هست
+        # 🔥 اطمینان از اینکه لیست هست
         current_history = user.mood_history
         if not isinstance(current_history, list):
             try:
@@ -53,17 +52,17 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     current_history = []
             except:
                 current_history = []
-            logger.warning(f"⚠️ mood_history به لیست تبدیل شد. نوع قبلی: {type(user.mood_history)}")
+            user.mood_history = current_history
+            logger.warning(f"⚠️ mood_history به لیست تبدیل شد.")
         
         # 🔥 اضافه کردن احساسات جدید
         new_entry = {
             "mood": mood,
             "date": datetime.now().isoformat()
         }
-        current_history.append(new_entry)
+        user.mood_history.append(new_entry)
         
         # 🔥 ذخیره در دیتابیس
-        user.mood_history = current_history
         db.commit()
         
         # 🔥 برای اطمینان، دوباره از دیتابیس بخون
@@ -79,7 +78,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.warning(f"⚠️ خطا در حذف پیام: {e}")
         
-        # 🔥 ارسال منوی اصلی
+        # 🔥 ارسال منوی اصلی با پیام تأیید
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
