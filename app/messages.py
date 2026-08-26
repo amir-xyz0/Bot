@@ -6,8 +6,11 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
-# مسیر پوشه data
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+# 🔥 اصلاح مسیر پوشه data (با استفاده از مسیر مطلق)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+logger.info(f"📂 مسیر پوشه data: {DATA_DIR}")
 
 # ============================================================
 # کلاس مدیریت پیام‌های چرخشی (بدون تکرار)
@@ -53,14 +56,18 @@ class CircularMessageManager:
 def load_json_file(filename):
     """بارگذاری فایل JSON از پوشه data"""
     file_path = os.path.join(DATA_DIR, filename)
+    logger.info(f"🔍 بررسی فایل: {file_path}")
+    
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            logger.info(f"✅ فایل {filename} با موفقیت بارگذاری شد.")
+            return data
     except FileNotFoundError:
-        logger.warning(f"⚠️ فایل {filename} پیدا نشد! از مقدار پیش‌فرض استفاده می‌شود.")
+        logger.warning(f"⚠️ فایل {filename} در مسیر {file_path} پیدا نشد!")
         return None
-    except json.JSONDecodeError:
-        logger.warning(f"⚠️ فایل {filename} معتبر نیست!")
+    except json.JSONDecodeError as e:
+        logger.warning(f"⚠️ فایل {filename} معتبر نیست! خطا: {e}")
         return None
 
 # ============================================================
@@ -77,16 +84,19 @@ def get_motivational_messages():
         data = load_json_file('motivational_messages.json')
         if data and isinstance(data, list) and len(data) > 0:
             _motivational_messages = data
+            logger.info(f"✅ {len(data)} پیام انگیزشی از فایل JSON بارگذاری شد.")
         else:
             # پیام‌های پیش‌فرض (در صورت نبود فایل)
             _motivational_messages = [
                 "💪 **یه یادآوری کوچیک:**\n\nامروز قراره اتفاقای خوبی بیوفته. فقط کافیه بهش ایمان داشته باشی.",
                 "🌟 **به خودت ایمان داشته باش:**\n\nتو از چیزی که فکر می‌کنی قوی‌تری.",
-                "🌸 **امروز روز توئه:**\n\nلبخند بزن، چون ارزشش رو داری."
+                "🌸 **امروز روز توئه:**\n\nلبخند بزن، چون ارزشش رو داری.",
+                "✨ **یادت باشه:**\n\nسخت‌ترین قدم‌ها، بزرگ‌ترین تغییرات رو رقم می‌زنن.",
+                "🌱 **هر روز یک فرصت جدید:**\n\nدیروز گذشت، امروز مال توئه."
             ]
+            logger.warning(f"⚠️ از {len(_motivational_messages)} پیام انگیزشی پیش‌فرض استفاده می‌شود.")
         
         _motivational_manager = CircularMessageManager(_motivational_messages)
-        logger.info(f"✅ {len(_motivational_messages)} پیام انگیزشی بارگذاری شد.")
     
     return _motivational_messages, _motivational_manager
 
@@ -108,26 +118,34 @@ def get_health_messages():
     if _health_messages is None:
         # تلاش برای بارگذاری از فایل health_messages.py
         try:
+            import sys
+            sys.path.insert(0, os.path.dirname(DATA_DIR))
             from app.data.health_messages import health_messages as health_list
             if health_list and len(health_list) > 0:
                 _health_messages = health_list
+                logger.info(f"✅ {len(health_list)} پیام سلامتی از health_messages.py بارگذاری شد.")
             else:
                 raise ImportError
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError) as e:
+            logger.warning(f"⚠️ health_messages.py پیدا نشد یا خالی است. تلاش برای بارگذاری JSON...")
+            
             # تلاش برای بارگذاری از فایل JSON
             data = load_json_file('health_messages.json')
             if data and isinstance(data, list) and len(data) > 0:
                 _health_messages = data
+                logger.info(f"✅ {len(data)} پیام سلامتی از JSON بارگذاری شد.")
             else:
                 # پیام‌های پیش‌فرض
                 _health_messages = [
                     "🧘 **مراقب سلامتیت باش:**\n\nهر روز چند دقیقه نفس عمیق بکش و به بدنت استراحت بده.",
                     "🥗 **تغذیه سالم:**\n\nامروز یه غذای سالم و مقوی بخور. بدنت به انرژی خوب نیاز داره.",
-                    "🚶‍♂️ **فعالیت بدنی:**\n\nتنها ۱۵ دقیقه پیاده‌روی می‌تونه حالت رو بهتر کنه."
+                    "🚶‍♂️ **فعالیت بدنی:**\n\nتنها ۱۵ دقیقه پیاده‌روی می‌تونه حالت رو بهتر کنه.",
+                    "💧 **آب بنوش:**\n\nنوشیدن آب کافی رو فراموش نکن. بدنت ممنون میشه.",
+                    "😴 **خواب کافی:**\n\nسعی کن امشب زودتر بخوابی. خواب کافی کلید سلامتیه."
                 ]
+                logger.warning(f"⚠️ از {len(_health_messages)} پیام سلامتی پیش‌فرض استفاده می‌شود.")
         
         _health_manager = CircularMessageManager(_health_messages)
-        logger.info(f"✅ {len(_health_messages)} پیام سلامتی بارگذاری شد.")
     
     return _health_messages, _health_manager
 
@@ -162,7 +180,4 @@ MOOD_REQUEST_MESSAGE = (
     "روزت رو چطور ارزیابی می‌کنی؟"
 )
 
-MOOD_THANK_MESSAGE = (
-    "✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
-    "حالت امروزت: {}"
-)
+MOOD_THANK_MESSAGE = "✅ احساسات شما با موفقیت ثبت شد! 🌸\n\nحالت امروزت: {}"
