@@ -145,7 +145,7 @@ def start_scheduler(app):
     
     scheduler.add_job(
         send_morning_messages,
-        CronTrigger(hour=22, minute=43),
+        CronTrigger(hour=23, minute=11),
         id="morning_job",
         replace_existing=True
     )
@@ -153,7 +153,7 @@ def start_scheduler(app):
     
     scheduler.add_job(
         send_night_messages,
-        CronTrigger(hour=22, minute=44),
+        CronTrigger(hour=23, minute=12),
         id="night_job",
         replace_existing=True
     )
