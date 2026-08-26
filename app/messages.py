@@ -1,6 +1,9 @@
 import json
 import os
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 # مسیر پوشه data
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
@@ -49,8 +52,14 @@ def get_random_health_message():
         pass
     return "🧘 مراقب سلامتیت باش و به خودت برس."
 
+# پیام ثبت احساسات (ثابت در کد)
 MOOD_REQUEST_MESSAGE = (
     "📝 **ثبت احساسات امروزت:**\n\n"
     "چطور بود امروز؟\n"
     "روزت رو چطور ارزیابی می‌کنی؟"
+)
+
+MOOD_THANK_MESSAGE = (
+    "✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
+    "حالت امروزت: {}"
 )
