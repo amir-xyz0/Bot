@@ -19,6 +19,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_map = {
         "good": "😊 خوب",
         "neutral": "😐 معمولی",
+        "bad": "😔 بد",
         "happy": "😄 خوشحال",
         "sad": "😢 ناراحت",
         "angry": "😡 عصبانی",
@@ -36,17 +37,16 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        # 🔥 روش اصولی برای کار با JSON در PostgreSQL
-        # اگر mood_history None هست، یک لیست خالی بساز
+        # 🔥 روش اصولی: گرفتن لیست فعلی، اضافه کردن، و ذخیره
+        # اگر None هست، لیست خالی بساز
         if user.mood_history is None:
             user.mood_history = []
             logger.info("📝 mood_history جدید (لیست خالی) ایجاد شد.")
         
-        # 🔥 اطمینان از اینکه mood_history یک لیست هست
+        # اطمینان از اینکه لیست هست
         current_history = user.mood_history
         if not isinstance(current_history, list):
             try:
-                # اگر string هست، به لیست تبدیل کن
                 if isinstance(current_history, str):
                     current_history = json.loads(current_history)
                 else:
@@ -55,7 +55,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 current_history = []
             logger.warning(f"⚠️ mood_history به لیست تبدیل شد. نوع قبلی: {type(user.mood_history)}")
         
-        # اضافه کردن احساسات جدید
+        # 🔥 اضافه کردن احساسات جدید
         new_entry = {
             "mood": mood,
             "date": datetime.now().isoformat()
@@ -72,14 +72,14 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد کل: {len(user.mood_history)}")
         logger.info(f"📋 محتوای mood_history: {user.mood_history}")
         
-        # حذف پیام دکمه‌های انتخاب احساسات
+        # 🔥 حذف پیام دکمه‌ها
         try:
             await query.message.delete()
             logger.info("✅ پیام دکمه‌های احساسات حذف شد.")
         except Exception as e:
             logger.warning(f"⚠️ خطا در حذف پیام: {e}")
         
-        # 🔥 ارسال مستقیم منوی اصلی (بدون پیام تأیید جداگانه)
+        # 🔥 ارسال منوی اصلی
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -141,8 +141,10 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        # 🔥 دریافت و تبدیل mood_history
+        # 🔥 دریافت تاریخچه
         mood_history = user.mood_history
+        
+        # 🔥 اگر None یا String بود، به لیست تبدیل کن
         if mood_history is None:
             mood_history = []
         elif not isinstance(mood_history, list):
@@ -153,6 +155,8 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     mood_history = []
             except:
                 mood_history = []
+        
+        logger.info(f"📊 تعداد احساسات ثبت‌شده: {len(mood_history)}")
         
         if not mood_history or len(mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
@@ -165,8 +169,7 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        logger.info(f"📊 تعداد احساسات ثبت‌شده: {len(mood_history)}")
-        
+        # 🔥 نمایش ۳۰ مورد آخر
         history = mood_history[-30:]
         text = "📋 **تاریخچه احساسات شما:**\n\n"
         mood_emoji = {
@@ -198,6 +201,7 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        
     except Exception as e:
         logger.error(f"❌ خطا در نمایش تاریخچه: {e}")
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
