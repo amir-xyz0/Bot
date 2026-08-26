@@ -46,9 +46,14 @@ async def main_menu_keep(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # 🔥 پیام قبلی رو حذف نمیکنیم (فقط منو رو ارسال میکنیم)
-    message = query.message
+    # 🔥 حذف دکمه‌های پیام سلامت (بدون حذف خود پیام)
+    try:
+        await query.edit_message_reply_markup(reply_markup=None)
+        logger.info("✅ دکمه‌های پیام سلامت حذف شدند، پیام باقی ماند.")
+    except Exception as e:
+        logger.warning(f"⚠️ خطا در حذف دکمه‌ها: {e}")
     
+    # ارسال منوی اصلی به صورت پیام جدید
     keyboard = [
         [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
          InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -70,8 +75,7 @@ async def main_menu_keep(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✨ هر روزت بهتر از دیروز ❤️"
     )
     
-    # ارسال منو به صورت پیام جدید (بدون حذف پیام سلامت)
-    await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+    await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
