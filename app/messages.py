@@ -12,10 +12,10 @@ def load_json_file(filename):
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
-        print(f"⚠️ فایل {filename} پیدا نشد!")
+        logger.warning(f"⚠️ فایل {filename} پیدا نشد!")
         return None
     except json.JSONDecodeError:
-        print(f"⚠️ فایل {filename} معتبر نیست!")
+        logger.warning(f"⚠️ فایل {filename} معتبر نیست!")
         return None
 
 def get_morning_message(name='عزیز'):
@@ -40,27 +40,17 @@ def get_random_motivational():
     return "🌟 امروز روز خوبی برات آرزو میکنم!"
 
 def get_random_health_message():
-    """دریافت یک پیام سلامتی رندم از فایل health_messages.py"""
+    """دریافت یک پیام سلامتی رندم"""
     try:
         from app.data.health_messages import health_messages
         if health_messages and len(health_messages) > 0:
             return random.choice(health_messages)
-        else:
-            return "🧘 مراقب سلامتیت باش و به خودت برس."
     except ImportError:
-        return "🧘 مراقب سلامتیت باش و به خودت برس."
-    except Exception as e:
-        print(f"⚠️ خطا در دریافت پیام سلامتی: {e}")
-        return "🧘 مراقب سلامتیت باش و به خودت برس."
+        pass
+    return "🧘 مراقب سلامتیت باش و به خودت برس."
 
-# پیام ثبت احساسات (ثابت در کد)
 MOOD_REQUEST_MESSAGE = (
     "📝 **ثبت احساسات امروزت:**\n\n"
     "چطور بود امروز؟\n"
     "روزت رو چطور ارزیابی می‌کنی؟"
-)
-
-MOOD_THANK_MESSAGE = (
-    "✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
-    "حالت امروزت: {}"
 )
