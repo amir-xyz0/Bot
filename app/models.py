@@ -15,6 +15,6 @@ class User(Base):
     morning_msg_enabled = Column(Boolean, default=True)
     night_msg_enabled = Column(Boolean, default=True)
     personality_profile = Column(JSON, nullable=True)
-    mood_history = Column(JSON, nullable=True, default=list)  # 🔥 مطمئن شو که JSON و default=list هست
+    mood_history = Column(JSON, nullable=True, default=list)  # 🔥 این خط مهمه
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
