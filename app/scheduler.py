@@ -169,7 +169,7 @@ def start_scheduler(app):
     # اضافه کردن job شب (ساعت ۲۳)
     scheduler.add_job(
         send_night_messages,
-        CronTrigger(hour=23, minute=0),
+        CronTrigger(hour=12, minute=24),
         id="night_job",
         replace_existing=True
     )
