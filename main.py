@@ -64,6 +64,7 @@ app.add_handler(CallbackQueryHandler(profile.get_gender, pattern="^gender_"))
 app.add_handler(CallbackQueryHandler(profile.get_style, pattern="^style_"))
 
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
+app.add_handler(CallbackQueryHandler(menu.main_menu_keep, pattern="main_menu_keep"))  # 🔥 جدید برای پیام سلامت
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
 app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.past_self_menu, pattern="past_self_menu"))
