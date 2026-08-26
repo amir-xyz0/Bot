@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from app.database import SessionLocal
 from app.models import User
 from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +31,29 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
+        # 🔥 بررسی و مقداردهی اولیه mood_history
         if user.mood_history is None:
             user.mood_history = []
+            logger.info("📝 mood_history جدید ایجاد شد.")
         
         # اضافه کردن احساسات جدید
         new_entry = {
             "mood": mood,
             "date": datetime.now().isoformat()
         }
-        user.mood_history.append(new_entry)
+        
+        # 🔥 تبدیل به لیست و اضافه کردن
+        current_history = user.mood_history if isinstance(user.mood_history, list) else []
+        current_history.append(new_entry)
+        user.mood_history = current_history
+        
+        # 🔥 ذخیره با commit
         db.commit()
+        # 🔥 برای اطمینان، دوباره کاربر رو از دیتابیس می‌خونیم
+        db.refresh(user)
         
         logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد کل: {len(user.mood_history)}")
+        logger.info(f"📋 محتوای mood_history: {user.mood_history}")
         
         # حذف پیام دکمه‌های انتخاب احساسات
         try:
@@ -59,6 +71,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error(f"❌ خطا در ثبت احساسات: {e}")
+        db.rollback()
         await query.message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
     finally:
         db.close()
@@ -93,7 +106,10 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        if not user.mood_history or len(user.mood_history) == 0:
+        # 🔥 بررسی mood_history
+        mood_history = user.mood_history if user.mood_history else []
+        
+        if not mood_history or len(mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
             text = (
                 "📭 **تاریخچه‌ای وجود ندارد.**\n\n"
@@ -104,9 +120,9 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        logger.info(f"📊 تعداد احساسات ثبت‌شده: {len(user.mood_history)}")
+        logger.info(f"📊 تعداد احساسات ثبت‌شده: {len(mood_history)}")
         
-        history = user.mood_history[-30:]
+        history = mood_history[-30:]
         text = "📋 **تاریخچه احساسات شما:**\n\n"
         mood_emoji = {
             "good": "😊",
