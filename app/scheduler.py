@@ -16,28 +16,18 @@ from app.messages import (
 
 logger = logging.getLogger(__name__)
 
-# ============================================================
-# متغیر سراسری برای دسترسی به Application
-# ============================================================
 _application = None
 
 def set_application(app):
-    """ذخیره Application برای استفاده در jobها"""
     global _application
     _application = app
     logger.info("✅ Application در Scheduler ذخیره شد.")
 
-# ============================================================
-# تابع اصلی ارسال پیام با مدیریت خطا
-# ============================================================
 async def send_message_to_user(user_id, text, reply_markup=None):
-    """ارسال پیام به کاربر با مدیریت کامل خطا"""
     global _application
-    
     if not _application:
-        logger.error("❌ Application در دسترس نیست! پیام ارسال نشد.")
+        logger.error("❌ Application در دسترس نیست!")
         return False
-    
     try:
         await _application.bot.send_message(
             chat_id=user_id,
@@ -50,16 +40,12 @@ async def send_message_to_user(user_id, text, reply_markup=None):
         logger.error(f"❌ خطا در ارسال پیام به {user_id}: {e}")
         return False
 
-# ============================================================
-# ارسال پیام‌های صبحگاهی (ساعت ۷ صبح)
-# ============================================================
 async def send_morning_messages():
-    """ارسال ۳ پیام صبحگاهی به کاربران فعال"""
+    """ارسال ۳ پیام صبحگاهی + دکمه بازگشت در پیام آخر"""
     logger.info(f"🌅 شروع ارسال پیام‌های صبحگاهی در ساعت {datetime.now().strftime('%H:%M')}")
     
     db = SessionLocal()
     try:
-        # دریافت کاربرانی که اعلان صبح فعال دارند
         users = db.query(User).filter(
             User.morning_msg_enabled == True,
             User.notifications == True
@@ -80,9 +66,18 @@ async def send_morning_messages():
                 await asyncio.sleep(3)
                 await send_message_to_user(user.user_id, get_random_motivational())
                 
-                # ۳. پیام سلامت (با تأخیر ۳ ثانیه)
+                # ۳. پیام سلامت + دکمه بازگشت به منو (با تأخیر ۳ ثانیه)
                 await asyncio.sleep(3)
-                await send_message_to_user(user.user_id, get_random_health_message())
+                health_text = get_random_health_message()
+                
+                # 🔥 دکمه بازگشت به منوی اصلی
+                keyboard = [[InlineKeyboardButton("🏠 بازگشت به خانه", callback_data="main_menu")]]
+                
+                await send_message_to_user(
+                    user.user_id,
+                    health_text,
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
                 
                 logger.info(f"✅ ۳ پیام صبحگاهی به کاربر {user.user_id} ارسال شد")
             except Exception as e:
@@ -95,16 +90,12 @@ async def send_morning_messages():
     
     logger.info("✅ ارسال پیام‌های صبحگاهی به پایان رسید.")
 
-# ============================================================
-# ارسال پیام‌های شبانه (ساعت ۲۳)
-# ============================================================
 async def send_night_messages():
     """ارسال ۲ پیام شبانه به کاربران فعال"""
     logger.info(f"🌙 شروع ارسال پیام‌های شبانه در ساعت {datetime.now().strftime('%H:%M')}")
     
     db = SessionLocal()
     try:
-        # دریافت کاربرانی که اعلان شب فعال دارند
         users = db.query(User).filter(
             User.night_msg_enabled == True,
             User.notifications == True
@@ -145,41 +136,32 @@ async def send_night_messages():
     
     logger.info("✅ ارسال پیام‌های شبانه به پایان رسید.")
 
-# ============================================================
-# راه‌اندازی Scheduler
-# ============================================================
 def start_scheduler(app):
-    """راه‌اندازی Scheduler با زمان تهران"""
     global _application
     _application = app
     logger.info("⏰ در حال راه‌اندازی Scheduler...")
     
-    # ایجاد Scheduler با منطقه زمانی تهران
     scheduler = AsyncIOScheduler(timezone="Asia/Tehran")
     
-    # اضافه کردن job صبح (ساعت ۷)
     scheduler.add_job(
         send_morning_messages,
-        CronTrigger(hour=7, minute=0),
+        CronTrigger(hour=20, minute=22),
         id="morning_job",
         replace_existing=True
     )
     logger.info("✅ job صبحگاهی تنظیم شد (ساعت ۷:۰۰ به وقت تهران)")
     
-    # اضافه کردن job شب (ساعت ۲۳)
     scheduler.add_job(
         send_night_messages,
-        CronTrigger(hour=12, minute=24),
+        CronTrigger(hour=20, minute=23),
         id="night_job",
         replace_existing=True
     )
     logger.info("✅ job شبانه تنظیم شد (ساعت ۲۳:۰۰ به وقت تهران)")
     
-    # شروع Scheduler
     scheduler.start()
     logger.info("🚀 Scheduler با موفقیت راه‌اندازی شد!")
     
-    # نمایش jobهای فعال
     jobs = scheduler.get_jobs()
     logger.info(f"📋 Jobهای فعال: {[job.id for job in jobs]}")
     
