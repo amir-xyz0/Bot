@@ -160,7 +160,7 @@ def start_scheduler(app):
     # اضافه کردن job صبح (ساعت ۷)
     scheduler.add_job(
         send_morning_messages,
-        CronTrigger(hour=12, minute=20),
+        CronTrigger(hour=7, minute=0),
         id="morning_job",
         replace_existing=True
     )
