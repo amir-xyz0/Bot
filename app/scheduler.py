@@ -41,7 +41,7 @@ async def send_message_to_user(user_id, text, reply_markup=None):
         return False
 
 async def send_morning_messages():
-    """ارسال ۳ پیام صبحگاهی + دکمه بازگشت در پیام آخر"""
+    """ارسال ۳ پیام صبحگاهی + دکمه بازگشت در پیام آخر (بدون حذف پیام)"""
     logger.info(f"🌅 شروع ارسال پیام‌های صبحگاهی در ساعت {datetime.now().strftime('%H:%M')}")
     
     db = SessionLocal()
@@ -66,12 +66,12 @@ async def send_morning_messages():
                 await asyncio.sleep(3)
                 await send_message_to_user(user.user_id, get_random_motivational())
                 
-                # ۳. پیام سلامت + دکمه بازگشت به منو (با تأخیر ۳ ثانیه)
+                # ۳. پیام سلامت + دکمه بازگشت (با تأخیر ۳ ثانیه)
                 await asyncio.sleep(3)
                 health_text = get_random_health_message()
                 
-                # 🔥 دکمه بازگشت به منوی اصلی
-                keyboard = [[InlineKeyboardButton("🏠 بازگشت به خانه", callback_data="main_menu")]]
+                # 🔥 دکمه بازگشت با callback_data جدید (برای جلوگیری از حذف پیام)
+                keyboard = [[InlineKeyboardButton("🏠 بازگشت به خانه", callback_data="main_menu_keep")]]
                 
                 await send_message_to_user(
                     user.user_id,
@@ -145,7 +145,7 @@ def start_scheduler(app):
     
     scheduler.add_job(
         send_morning_messages,
-        CronTrigger(hour=20, minute=22),
+        CronTrigger(hour=7, minute=0),
         id="morning_job",
         replace_existing=True
     )
@@ -153,7 +153,7 @@ def start_scheduler(app):
     
     scheduler.add_job(
         send_night_messages,
-        CronTrigger(hour=20, minute=23),
+        CronTrigger(hour=23, minute=0),
         id="night_job",
         replace_existing=True
     )
