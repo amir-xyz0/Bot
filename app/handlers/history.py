@@ -1,10 +1,11 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from app.database import SessionLocal
+from app.database import engine, SessionLocal
 from app.models import User
 from datetime import datetime
 import json
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -29,56 +30,65 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     mood_text = mood_map.get(mood, mood)
     
-    db = SessionLocal()
+    # 🔥 روش جدید: استفاده از SQL خام
     try:
+        # ۱. ابتدا کاربر رو پیدا کن
+        db = SessionLocal()
         user = db.query(User).filter_by(user_id=user_id).first()
+        
         if not user:
             await query.message.reply_text("❗ کاربر یافت نشد.")
             db.close()
             return
         
-        # 🔥 بررسی و مقداردهی mood_history
-        if user.mood_history is None:
-            user.mood_history = []
-            logger.info("📝 mood_history جدید (لیست خالی) ایجاد شد.")
-        
-        # 🔥 اطمینان از اینکه لیست هست
+        # ۲. تاریخچه فعلی رو بگیر
         current_history = user.mood_history
-        if not isinstance(current_history, list):
+        if current_history is None:
+            current_history = []
+        elif isinstance(current_history, str):
             try:
-                if isinstance(current_history, str):
-                    current_history = json.loads(current_history)
-                else:
-                    current_history = []
+                current_history = json.loads(current_history)
             except:
                 current_history = []
-            user.mood_history = current_history
-            logger.warning(f"⚠️ mood_history به لیست تبدیل شد.")
+        elif not isinstance(current_history, list):
+            current_history = []
         
-        # 🔥 اضافه کردن احساسات جدید
+        # ۳. احساسات جدید رو اضافه کن
         new_entry = {
             "mood": mood,
             "date": datetime.now().isoformat()
         }
-        user.mood_history.append(new_entry)
+        current_history.append(new_entry)
         
-        # 🔥 ذخیره در دیتابیس
-        db.commit()
+        # ۴. تبدیل به JSON برای ذخیره
+        history_json = json.dumps(current_history)
         
-        # 🔥 برای اطمینان، دوباره از دیتابیس بخون
-        db.refresh(user)
+        # ۵. ذخیره با SQL خام (مستقیم)
+        db.close()
         
-        logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد کل: {len(user.mood_history)}")
-        logger.info(f"📋 محتوای mood_history: {user.mood_history}")
+        # 🔥 استفاده از SQL خام برای ذخیره
+        with engine.connect() as conn:
+            stmt = text("""
+                UPDATE users 
+                SET mood_history = :history_json 
+                WHERE user_id = :user_id
+            """)
+            conn.execute(stmt, {
+                "history_json": history_json,
+                "user_id": user_id
+            })
+            conn.commit()
         
-        # 🔥 حذف پیام دکمه‌ها
+        logger.info(f"✅ احساسات کاربر {user_id} با SQL خام ذخیره شد. تعداد کل: {len(current_history)}")
+        
+        # ۶. حذف پیام دکمه‌ها
         try:
             await query.message.delete()
             logger.info("✅ پیام دکمه‌های احساسات حذف شد.")
         except Exception as e:
             logger.warning(f"⚠️ خطا در حذف پیام: {e}")
         
-        # 🔥 ارسال منوی اصلی با پیام تأیید
+        # ۷. ارسال منوی اصلی
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -105,10 +115,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         logger.error(f"❌ خطا در ثبت احساسات: {e}")
-        db.rollback()
         await query.message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
-    finally:
-        db.close()
 
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -128,32 +135,34 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message:
         return
     
-    db = SessionLocal()
+    # 🔥 دریافت تاریخچه با SQL خام
     try:
-        user = db.query(User).filter_by(user_id=user_id).first()
-        if not user:
+        with engine.connect() as conn:
+            stmt = text("""
+                SELECT mood_history FROM users WHERE user_id = :user_id
+            """)
+            result = conn.execute(stmt, {"user_id": user_id}).fetchone()
+        
+        if not result:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
             await message.reply_text(
                 "❗ کاربر یافت نشد.",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
-            db.close()
             return
         
-        # 🔥 دریافت تاریخچه
-        mood_history = user.mood_history
+        mood_history = result[0]
         
-        # 🔥 اگر None یا String بود، به لیست تبدیل کن
+        # تبدیل به لیست
         if mood_history is None:
             mood_history = []
-        elif not isinstance(mood_history, list):
+        elif isinstance(mood_history, str):
             try:
-                if isinstance(mood_history, str):
-                    mood_history = json.loads(mood_history)
-                else:
-                    mood_history = []
+                mood_history = json.loads(mood_history)
             except:
                 mood_history = []
+        elif not isinstance(mood_history, list):
+            mood_history = []
         
         logger.info(f"📊 تعداد احساسات ثبت‌شده: {len(mood_history)}")
         
@@ -165,10 +174,9 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "از منوی اصلی می‌تونی احساساتت رو ثبت کنی."
             )
             await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
-            db.close()
             return
         
-        # 🔥 نمایش ۳۰ مورد آخر
+        # نمایش ۳۰ مورد آخر
         history = mood_history[-30:]
         text = "📋 **تاریخچه احساسات شما:**\n\n"
         mood_emoji = {
@@ -208,5 +216,3 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ خطایی رخ داد. لطفاً دوباره تلاش کن.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-    finally:
-        db.close()
