@@ -13,6 +13,8 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     mood = query.data.split("_")[1]
     
+    logger.info(f"📝 ثبت احساسات: user_id={user_id}, mood={mood}")
+    
     mood_map = {
         "good": "😊 خوب",
         "neutral": "😐 معمولی",
@@ -32,16 +34,19 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user.mood_history = []
         
         # اضافه کردن احساسات جدید
-        user.mood_history.append({
+        new_entry = {
             "mood": mood,
             "date": datetime.now().isoformat()
-        })
+        }
+        user.mood_history.append(new_entry)
         db.commit()
-        logger.info(f"✅ احساسات کاربر {user_id} ثبت شد: {mood}")
+        
+        logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد کل: {len(user.mood_history)}")
         
         # حذف پیام دکمه‌های انتخاب احساسات
         try:
             await query.message.delete()
+            logger.info("✅ پیام دکمه‌های احساسات حذف شد.")
         except Exception as e:
             logger.warning(f"⚠️ خطا در حذف پیام: {e}")
         
@@ -60,6 +65,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    logger.info(f"📋 نمایش تاریخچه: user_id={user_id}")
     
     query = update.callback_query
     if query:
@@ -78,7 +84,16 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
-        if not user or not user.mood_history or len(user.mood_history) == 0:
+        if not user:
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+            await message.reply_text(
+                "❗ کاربر یافت نشد.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            db.close()
+            return
+        
+        if not user.mood_history or len(user.mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
             text = (
                 "📭 **تاریخچه‌ای وجود ندارد.**\n\n"
@@ -88,6 +103,8 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
             db.close()
             return
+        
+        logger.info(f"📊 تعداد احساسات ثبت‌شده: {len(user.mood_history)}")
         
         history = user.mood_history[-30:]
         text = "📋 **تاریخچه احساسات شما:**\n\n"
