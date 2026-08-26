@@ -16,6 +16,18 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"📝 ثبت احساسات: user_id={user_id}, mood={mood}")
     
+    mood_map = {
+        "good": "😊 خوب",
+        "neutral": "😐 معمولی",
+        "happy": "😄 خوشحال",
+        "sad": "😢 ناراحت",
+        "angry": "😡 عصبانی",
+        "tired": "😴 خسته",
+        "excited": "🤩 هیجان‌زده",
+        "anxious": "😰 مضطرب"
+    }
+    mood_text = mood_map.get(mood, mood)
+    
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
@@ -24,19 +36,24 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        # 🔥 مطمئن بشیم mood_history لیست هست
+        # 🔥 روش اصولی برای کار با JSON در PostgreSQL
+        # اگر mood_history None هست، یک لیست خالی بساز
         if user.mood_history is None:
             user.mood_history = []
-            logger.info("📝 mood_history جدید ایجاد شد.")
+            logger.info("📝 mood_history جدید (لیست خالی) ایجاد شد.")
         
-        # 🔥 تبدیل به لیست اگر JSON باشه
+        # 🔥 اطمینان از اینکه mood_history یک لیست هست
         current_history = user.mood_history
         if not isinstance(current_history, list):
             try:
-                current_history = json.loads(current_history) if isinstance(current_history, str) else []
+                # اگر string هست، به لیست تبدیل کن
+                if isinstance(current_history, str):
+                    current_history = json.loads(current_history)
+                else:
+                    current_history = []
             except:
                 current_history = []
-            logger.warning("⚠️ mood_history به لیست تبدیل شد.")
+            logger.warning(f"⚠️ mood_history به لیست تبدیل شد. نوع قبلی: {type(user.mood_history)}")
         
         # اضافه کردن احساسات جدید
         new_entry = {
@@ -45,24 +62,24 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         current_history.append(new_entry)
         
-        # 🔥 ذخیره به صورت JSON در دیتابیس
+        # 🔥 ذخیره در دیتابیس
         user.mood_history = current_history
         db.commit()
         
-        # 🔥 برای اطمینان، دوباره کاربر رو از دیتابیس می‌خونیم
+        # 🔥 برای اطمینان، دوباره از دیتابیس بخون
         db.refresh(user)
         
         logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد کل: {len(user.mood_history)}")
         logger.info(f"📋 محتوای mood_history: {user.mood_history}")
         
-        # 🔥 حذف پیام دکمه‌های انتخاب احساسات
+        # حذف پیام دکمه‌های انتخاب احساسات
         try:
             await query.message.delete()
             logger.info("✅ پیام دکمه‌های احساسات حذف شد.")
         except Exception as e:
             logger.warning(f"⚠️ خطا در حذف پیام: {e}")
         
-        # 🔥 ارسال مستقیم منوی اصلی (بدون پیام تأیید)
+        # 🔥 ارسال مستقیم منوی اصلی (بدون پیام تأیید جداگانه)
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -74,8 +91,8 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         text = (
             "🏠 **خانه**\n\n"
-            "به ربات همراه و مشاوره شخصی خود خوش آمدی. 🌸\n\n"
-            f"✅ احساسات امروزت (**{mood}**) با موفقیت ثبت شد!\n\n"
+            f"✅ احساسات امروزت (**{mood_text}**) با موفقیت ثبت شد! 🌸\n\n"
+            "به ربات همراه و مشاوره شخصی خود خوش آمدی.\n\n"
             "اینجا می‌تونی:\n"
             "• با **همراه هوشمند** خودت گفتگو کنی\n"
             "• از **مشاوره‌های عمیق** بهره‌مند بشی\n"
@@ -124,11 +141,16 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.close()
             return
         
-        # 🔥 بررسی mood_history
-        mood_history = user.mood_history if user.mood_history else []
-        if not isinstance(mood_history, list):
+        # 🔥 دریافت و تبدیل mood_history
+        mood_history = user.mood_history
+        if mood_history is None:
+            mood_history = []
+        elif not isinstance(mood_history, list):
             try:
-                mood_history = json.loads(mood_history) if isinstance(mood_history, str) else []
+                if isinstance(mood_history, str):
+                    mood_history = json.loads(mood_history)
+                else:
+                    mood_history = []
             except:
                 mood_history = []
         
