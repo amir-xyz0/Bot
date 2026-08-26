@@ -42,16 +42,16 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def main_menu_keep(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """منوی اصلی (بدون حذف پیام قبلی - مخصوص پیام سلامت)"""
+    """منوی اصلی (حذف کامل پیام سلامت و نمایش منو)"""
     query = update.callback_query
     await query.answer()
     
-    # 🔥 حذف دکمه‌های پیام سلامت (بدون حذف خود پیام)
+    # حذف کامل پیام سلامت (نه فقط دکمه‌ها)
     try:
-        await query.edit_message_reply_markup(reply_markup=None)
-        logger.info("✅ دکمه‌های پیام سلامت حذف شدند، پیام باقی ماند.")
+        await query.message.delete()
+        logger.info("✅ پیام سلامت با موفقیت حذف شد.")
     except Exception as e:
-        logger.warning(f"⚠️ خطا در حذف دکمه‌ها: {e}")
+        logger.warning(f"⚠️ خطا در حذف پیام سلامت: {e}")
     
     # ارسال منوی اصلی به صورت پیام جدید
     keyboard = [
