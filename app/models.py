@@ -21,6 +21,6 @@ class User(Base):
     morning_msg_enabled = Column(Boolean, default=True)
     night_msg_enabled = Column(Boolean, default=True)
     personality_profile = Column(JSONB if IS_POSTGRES else JSON, nullable=True)
-    mood_history = Column(JSONB if IS_POSTGRES else JSON, nullable=True, default=list)  # 🔥 استفاده از JSONB برای PostgreSQL
+    mood_history = Column(JSONB if IS_POSTGRES else JSON, nullable=True, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
