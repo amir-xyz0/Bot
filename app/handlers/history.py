@@ -30,7 +30,6 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     mood_text = mood_map.get(mood, mood)
     
-    # 🔥 روش جدید: استفاده از SQL خام
     try:
         # ۱. ابتدا کاربر رو پیدا کن
         db = SessionLocal()
@@ -61,12 +60,12 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_history.append(new_entry)
         
         # ۴. تبدیل به JSON برای ذخیره
-        history_json = json.dumps(current_history)
+        history_json = json.dumps(current_history, ensure_ascii=False)
         
-        # ۵. ذخیره با SQL خام (مستقیم)
+        # ۵. بستن session قبلی
         db.close()
         
-        # 🔥 استفاده از SQL خام برای ذخیره
+        # ۶. ذخیره با SQL خام
         with engine.connect() as conn:
             stmt = text("""
                 UPDATE users 
@@ -81,14 +80,14 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.info(f"✅ احساسات کاربر {user_id} با SQL خام ذخیره شد. تعداد کل: {len(current_history)}")
         
-        # ۶. حذف پیام دکمه‌ها
+        # ۷. حذف پیام دکمه‌ها
         try:
             await query.message.delete()
             logger.info("✅ پیام دکمه‌های احساسات حذف شد.")
         except Exception as e:
             logger.warning(f"⚠️ خطا در حذف پیام: {e}")
         
-        # ۷. ارسال منوی اصلی
+        # ۸. ارسال منوی اصلی
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -98,6 +97,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
         ]
         
+        # 🔥 متن پیام (اینجا تعریف شده)
         text = (
             "🏠 **خانه**\n\n"
             f"✅ احساسات امروزت (**{mood_text}**) با موفقیت ثبت شد! 🌸\n\n"
@@ -135,7 +135,6 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message:
         return
     
-    # 🔥 دریافت تاریخچه با SQL خام
     try:
         with engine.connect() as conn:
             stmt = text("""
