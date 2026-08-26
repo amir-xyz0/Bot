@@ -41,7 +41,7 @@ app.add_handler(CommandHandler("start", start.start))
 app.add_handler(CommandHandler("menu", menu.main_menu))
 
 # ============================================================
-# ConversationHandler ثبت‌نام - فعال
+# ConversationHandler ثبت‌نام
 # ============================================================
 conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(profile.start_profile, pattern="start_profile")],
@@ -98,10 +98,10 @@ app.add_handler(CallbackQueryHandler(history.full_history, pattern="full_history
 app.add_handler(CallbackQueryHandler(predictor.predict_tomorrow, pattern="predict_tomorrow"))
 
 # ============================================================
-# MessageRouter - فقط زمانی که ConversationHandler فعال نیست
+# MessageRouter - مسیریابی پیام‌ها
 # ============================================================
 async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """مسیریابی پیام‌ها - فقط زمانی که کاربر در ConversationHandler نیست"""
+    """مسیریابی پیام‌ها بر اساس current_section و حالت ویرایش"""
     logger.info("🔥 message_router فراخوانی شد!")
     
     # اگر ConversationHandler فعال است (ثبت‌نام در حال انجام)، کاری نکن
@@ -160,7 +160,7 @@ logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
 Base.metadata.create_all(engine)
 logger.info("✅ جدول‌ها آماده هستند.")
 
-# راه‌اندازی Scheduler با ارسال app برای دسترسی به bot
+# 🔥 راه‌اندازی Scheduler با ارسال app
 scheduler = start_scheduler(app)
 
 # ============================================================
@@ -187,4 +187,4 @@ if __name__ == "__main__":
         port=port,
         url_path=config.BOT_TOKEN,
         webhook_url=webhook_url
-)
+    )
