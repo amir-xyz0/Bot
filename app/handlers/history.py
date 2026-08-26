@@ -23,32 +23,38 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
-        if user:
-            if user.mood_history is None:
-                user.mood_history = []
-            user.mood_history.append({
-                "mood": mood,
-                "date": datetime.now().isoformat()
-            })
-            db.commit()
-            logger.info(f"✅ احساسات کاربر {user_id} ثبت شد: {mood}")
-            
-            try:
-                await query.message.delete()
-            except:
-                pass
-            
-            keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-            await query.message.reply_text(
-                f"✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
-                f"حالت امروزت: {mood_text}",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        else:
+        if not user:
             await query.edit_message_text("❗ کاربر یافت نشد.")
+            db.close()
+            return
+        
+        if user.mood_history is None:
+            user.mood_history = []
+        
+        # اضافه کردن احساسات جدید
+        user.mood_history.append({
+            "mood": mood,
+            "date": datetime.now().isoformat()
+        })
+        db.commit()
+        logger.info(f"✅ احساسات کاربر {user_id} ثبت شد: {mood}")
+        
+        # حذف پیام دکمه‌های انتخاب احساسات
+        try:
+            await query.message.delete()
+        except Exception as e:
+            logger.warning(f"⚠️ خطا در حذف پیام: {e}")
+        
+        # ارسال پیام تأیید با دکمه بازگشت
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        await query.message.reply_text(
+            f"✅ احساسات شما با موفقیت ثبت شد! 🌸\n\n"
+            f"حالت امروزت: {mood_text}",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     except Exception as e:
         logger.error(f"❌ خطا در ثبت احساسات: {e}")
-        await query.edit_message_text("❌ خطایی رخ داد.")
+        await query.message.reply_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
     finally:
         db.close()
 
