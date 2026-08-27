@@ -30,46 +30,46 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_text = mood_map.get(mood, mood)
     
     try:
-        # ۱. دریافت تاریخچه فعلی
-        with engine.connect() as conn:
+        # 🔥 استفاده از connection با commit صحیح
+        with engine.connect() as connection:
+            # ۱. دریافت تاریخچه فعلی
             stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
-            result = conn.execute(stmt, {"user_id": user_id}).fetchone()
-        
-        # ۲. تبدیل به لیست
-        if result and result[0]:
-            current_history = result[0]
-            if isinstance(current_history, str):
-                try:
-                    current_history = json.loads(current_history)
-                except:
+            result = connection.execute(stmt, {"user_id": user_id}).fetchone()
+            
+            # ۲. تبدیل به لیست
+            if result and result[0]:
+                current_history = result[0]
+                if isinstance(current_history, str):
+                    try:
+                        current_history = json.loads(current_history)
+                    except:
+                        current_history = []
+                elif not isinstance(current_history, list):
                     current_history = []
-            elif not isinstance(current_history, list):
+            else:
                 current_history = []
-        else:
-            current_history = []
-        
-        # ۳. اضافه کردن احساسات جدید
-        new_entry = {
-            "mood": mood,
-            "date": datetime.now().isoformat()
-        }
-        current_history.append(new_entry)
-        
-        # ۴. تبدیل به JSON
-        history_json = json.dumps(current_history, ensure_ascii=False)
-        
-        # ۵. ذخیره در دیتابیس
-        with engine.connect() as conn:
+            
+            # ۳. اضافه کردن احساسات جدید
+            new_entry = {
+                "mood": mood,
+                "date": datetime.now().isoformat()
+            }
+            current_history.append(new_entry)
+            
+            # ۴. تبدیل به JSON
+            history_json = json.dumps(current_history, ensure_ascii=False)
+            
+            # ۵. ذخیره در دیتابیس
             stmt = text("""
                 UPDATE users 
                 SET mood_history = :history_json 
                 WHERE user_id = :user_id
             """)
-            conn.execute(stmt, {
+            connection.execute(stmt, {
                 "history_json": history_json,
                 "user_id": user_id
             })
-            conn.commit()
+            connection.commit()  # 🔥 commit صحیح
         
         logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد: {len(current_history)}")
         
@@ -79,7 +79,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
         
-        # ۷. ارسال منوی اصلی با پیام تأیید (مستقیم، بدون متغیر جداگانه)
+        # ۷. ارسال منوی اصلی
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -89,7 +89,6 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
         ]
         
-        # 🔥 ارسال مستقیم پیام (بدون متغیر جداگانه)
         await query.message.reply_text(
             f"🏠 **خانه**\n\n"
             f"✅ احساسات امروزت (**{mood_text}**) با موفقیت ثبت شد! 🌸\n\n"
@@ -127,10 +126,9 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     try:
-        # دریافت تاریخچه با SQL خام
-        with engine.connect() as conn:
+        with engine.connect() as connection:
             stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
-            result = conn.execute(stmt, {"user_id": user_id}).fetchone()
+            result = connection.execute(stmt, {"user_id": user_id}).fetchone()
         
         if not result:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
