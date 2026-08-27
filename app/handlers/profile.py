@@ -19,9 +19,8 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
     msg = await query.message.reply_text(
-        "📝 **ثبت‌نام**\n\n"
-        "به ربات همراه و مشاوره شخصی خوش آمدی!\n"
-        "برای شروع، لطفاً نام خود را وارد کن:"
+        "👋 به ربات همراه خوش آمدی"
+        "برای شروع، نام خود را وارد کن:"
     )
     context.user_data['last_bot_message_id'] = msg.message_id
     return NAME
@@ -45,7 +44,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("👩 زن", callback_data="gender_female")]
     ]
     msg = await update.message.reply_text(
-        f"👋 خوش آمدی **{name}**!\n\n"
+        f"👋 خوش آمدی {name}!\n\n"
         "جنسیت خود را انتخاب کن:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -65,8 +64,7 @@ async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     context.user_data['gender'] = gender
     msg = await query.message.reply_text(
-        "📅 **سن خود را وارد کن:**\n\n"
-        "(فقط عدد وارد کن، مثلاً ۲۵)"
+        "سن خود را به عدد وارد کن:\n\n"
     )
     context.user_data['last_bot_message_id'] = msg.message_id
     return AGE
@@ -96,8 +94,8 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🧘 آرام", callback_data="style_calm")]
     ]
     msg = await update.message.reply_text(
-        "🎭 **سبک گفتگو را انتخاب کن:**\n\n"
-        "این سبک در بخش «گفتگوی همراه» استفاده میشه.",
+        "🎭 سبک گفتگو را انتخاب کن:\n\n"
+        "این سبک در بخش «گفتگو با دستیار» استفاده میشه.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     context.user_data['last_bot_message_id'] = msg.message_id
@@ -138,7 +136,7 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if admin_id:
                 total = db.query(User).count()
                 admin_text = (
-                    f"✅ **کاربر جدید ثبت‌نام کرد!**\n\n"
+                    f"✅ کاربر جدید ثبت‌نام کرد!\n\n"
                     f"👤 نام: {user.preferred_name}\n"
                     f"🆔 آیدی: {user.user_id}\n"
                     f"📅 تاریخ: {datetime.now().strftime('%Y/%m/%d %H:%M')}\n"
@@ -159,14 +157,14 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         keyboard = [[InlineKeyboardButton("🏠 رفتن به خانه", callback_data="main_menu")]]
         await query.message.reply_text(
-            "✅ **ثبت‌نام شما با موفقیت کامل شد!**\n\n"
-            "به جمع کاربران ربات همراه خوش آمدی. 🌸\n"
+            "✅ ثبت‌نام شما با موفقیت کامل شد!\n\n"
+            "به جمع کاربران تارس خوش آمدی. 🌸\n"
             "حالا می‌تونی از همه بخش‌ها استفاده کنی.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     except Exception as e:
         logger.error(f"❌ خطا در ذخیره کاربر: {e}")
-        await query.message.reply_text("❌ خطایی در ثبت‌نام رخ داد. لطفاً دوباره /start را بزنید.")
+        await query.message.reply_text(" خطایی در ثبت‌نام رخ داد لطفا دوباره شروع کنید.")
     finally:
         db.close()
     context.user_data.clear()
