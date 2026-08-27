@@ -30,7 +30,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_text = mood_map.get(mood, mood)
     
     try:
-        # ۱. دریافت تاریخچه فعلی با SQL خام
+        # ۱. دریافت تاریخچه فعلی
         with engine.connect() as conn:
             stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
             result = conn.execute(stmt, {"user_id": user_id}).fetchone()
@@ -79,7 +79,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
         
-        # ۷. ارسال منوی اصلی
+        # ۷. ارسال منوی اصلی با پیام تأیید (مستقیم، بدون متغیر جداگانه)
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -89,9 +89,9 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
         ]
         
-        # 🔥 متن پیام (قبل از استفاده تعریف شده)
-        text = (
-            "🏠 **خانه**\n\n"
+        # 🔥 ارسال مستقیم پیام (بدون متغیر جداگانه)
+        await query.message.reply_text(
+            f"🏠 **خانه**\n\n"
             f"✅ احساسات امروزت (**{mood_text}**) با موفقیت ثبت شد! 🌸\n\n"
             "به ربات همراه و مشاوره شخصی خود خوش آمدی.\n\n"
             "اینجا می‌تونی:\n"
@@ -100,10 +100,9 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• با **گذشته‌ات** ارتباط بگیری و ازش یاد بگیری\n"
             "• احساساتت رو **ثبت** کنی و روندش رو ببینی\n"
             "• و خیلی چیزهای دیگه...\n\n"
-            "✨ هر روزت بهتر از دیروز ❤️"
+            "✨ هر روزت بهتر از دیروز ❤️",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        
-        await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     except Exception as e:
         logger.error(f"❌ خطا در ثبت احساسات: {e}")
@@ -157,12 +156,12 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if not mood_history or len(mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-            text = (
+            await message.reply_text(
                 "📭 **تاریخچه‌ای وجود ندارد.**\n\n"
                 "هنوز احساساتی ثبت نکردی.\n"
-                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی."
+                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
             )
-            await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
             return
         
         # نمایش ۳۰ مورد آخر
