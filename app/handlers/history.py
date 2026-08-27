@@ -1,8 +1,7 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from app.database import engine, SessionLocal
-from app.models import User
+from app.database import engine
 from datetime import datetime
 import json
 from sqlalchemy import text
@@ -31,41 +30,35 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_text = mood_map.get(mood, mood)
     
     try:
-        # ۱. ابتدا کاربر رو پیدا کن
-        db = SessionLocal()
-        user = db.query(User).filter_by(user_id=user_id).first()
+        # ۱. دریافت تاریخچه فعلی با SQL خام
+        with engine.connect() as conn:
+            stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
+            result = conn.execute(stmt, {"user_id": user_id}).fetchone()
         
-        if not user:
-            await query.message.reply_text("❗ کاربر یافت نشد.")
-            db.close()
-            return
-        
-        # ۲. تاریخچه فعلی رو بگیر
-        current_history = user.mood_history
-        if current_history is None:
-            current_history = []
-        elif isinstance(current_history, str):
-            try:
-                current_history = json.loads(current_history)
-            except:
+        # ۲. تبدیل به لیست
+        if result and result[0]:
+            current_history = result[0]
+            if isinstance(current_history, str):
+                try:
+                    current_history = json.loads(current_history)
+                except:
+                    current_history = []
+            elif not isinstance(current_history, list):
                 current_history = []
-        elif not isinstance(current_history, list):
+        else:
             current_history = []
         
-        # ۳. احساسات جدید رو اضافه کن
+        # ۳. اضافه کردن احساسات جدید
         new_entry = {
             "mood": mood,
             "date": datetime.now().isoformat()
         }
         current_history.append(new_entry)
         
-        # ۴. تبدیل به JSON برای ذخیره
+        # ۴. تبدیل به JSON
         history_json = json.dumps(current_history, ensure_ascii=False)
         
-        # ۵. بستن session قبلی
-        db.close()
-        
-        # ۶. ذخیره با SQL خام
+        # ۵. ذخیره در دیتابیس
         with engine.connect() as conn:
             stmt = text("""
                 UPDATE users 
@@ -78,16 +71,15 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
             })
             conn.commit()
         
-        logger.info(f"✅ احساسات کاربر {user_id} با SQL خام ذخیره شد. تعداد کل: {len(current_history)}")
+        logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد: {len(current_history)}")
         
-        # ۷. حذف پیام دکمه‌ها
+        # ۶. حذف پیام دکمه‌ها
         try:
             await query.message.delete()
-            logger.info("✅ پیام دکمه‌های احساسات حذف شد.")
-        except Exception as e:
-            logger.warning(f"⚠️ خطا در حذف پیام: {e}")
+        except:
+            pass
         
-        # ۸. ارسال منوی اصلی
+        # ۷. ارسال منوی اصلی
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -97,7 +89,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
         ]
         
-        # 🔥 متن پیام (اینجا تعریف شده)
+        # 🔥 متن پیام (قبل از استفاده تعریف شده)
         text = (
             "🏠 **خانه**\n\n"
             f"✅ احساسات امروزت (**{mood_text}**) با موفقیت ثبت شد! 🌸\n\n"
@@ -136,10 +128,9 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     try:
+        # دریافت تاریخچه با SQL خام
         with engine.connect() as conn:
-            stmt = text("""
-                SELECT mood_history FROM users WHERE user_id = :user_id
-            """)
+            stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
             result = conn.execute(stmt, {"user_id": user_id}).fetchone()
         
         if not result:
@@ -150,9 +141,8 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        mood_history = result[0]
-        
         # تبدیل به لیست
+        mood_history = result[0]
         if mood_history is None:
             mood_history = []
         elif isinstance(mood_history, str):
