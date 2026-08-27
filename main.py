@@ -64,7 +64,7 @@ app.add_handler(CallbackQueryHandler(profile.get_gender, pattern="^gender_"))
 app.add_handler(CallbackQueryHandler(profile.get_style, pattern="^style_"))
 
 app.add_handler(CallbackQueryHandler(menu.main_menu, pattern="main_menu"))
-app.add_handler(CallbackQueryHandler(menu.main_menu_keep, pattern="main_menu_keep"))  # 🔥 جدید برای پیام سلامت
+app.add_handler(CallbackQueryHandler(menu.main_menu_keep, pattern="main_menu_keep"))
 app.add_handler(CallbackQueryHandler(menu.chat_menu, pattern="chat_menu"))
 app.add_handler(CallbackQueryHandler(menu.therapy_menu, pattern="therapy_menu"))
 app.add_handler(CallbackQueryHandler(menu.past_self_menu, pattern="past_self_menu"))
@@ -90,8 +90,7 @@ app.add_handler(CallbackQueryHandler(profile_edit.edit_age, pattern="edit_age"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_style, pattern="edit_style"))
 app.add_handler(CallbackQueryHandler(profile_edit.set_style, pattern="set_style_"))
 app.add_handler(CallbackQueryHandler(profile_edit.edit_notifications, pattern="edit_notifications"))
-app.add_handler(CallbackQueryHandler(profile_edit.edit_morning, pattern="edit_morning"))
-app.add_handler(CallbackQueryHandler(profile_edit.edit_night, pattern="edit_night"))
+# 🔥 edit_morning و edit_night حذف شدند
 app.add_handler(CallbackQueryHandler(profile_edit.profile_menu, pattern="profile_menu"))
 
 app.add_handler(CallbackQueryHandler(history.record_mood, pattern="mood_"))
@@ -105,12 +104,10 @@ async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """مسیریابی پیام‌ها بر اساس current_section و حالت ویرایش"""
     logger.info("🔥 message_router فراخوانی شد!")
     
-    # اگر ConversationHandler فعال است (ثبت‌نام در حال انجام)، کاری نکن
     if context.user_data.get('conversation_state'):
         logger.info("⏭️ ConversationHandler فعال است، عبور از message_router")
         return
     
-    # فقط پیام‌های متنی رو پردازش کن
     if not update.message or not update.message.text:
         logger.info("⏭️ پیام متنی نیست")
         return
@@ -118,9 +115,6 @@ async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info("⏭️ پیام کامند است")
         return
 
-    # ============================================================
-    # اولویت ۱: حالت ویرایش پروفایل
-    # ============================================================
     editing = context.user_data.get('editing')
     if editing == 'name':
         from app.handlers import profile_edit
@@ -131,9 +125,6 @@ async def message_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await profile_edit.process_age_edit(update, context)
         return
 
-    # ============================================================
-    # اولویت ۲: مسیریابی بر اساس current_section
-    # ============================================================
     current_section = context.user_data.get('current_section')
     logger.info(f"📩 message_router: current_section={current_section}")
 
@@ -161,7 +152,6 @@ logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
 Base.metadata.create_all(engine)
 logger.info("✅ جدول‌ها آماده هستند.")
 
-# 🔥 راه‌اندازی Scheduler با ارسال app
 scheduler = start_scheduler(app)
 
 # ============================================================
