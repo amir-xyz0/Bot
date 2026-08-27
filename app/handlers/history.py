@@ -30,46 +30,47 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_text = mood_map.get(mood, mood)
     
     try:
-        # 🔥 استفاده از connection با commit صحیح
+        # 🔥 استفاده از begin() برای مدیریت خودکار commit
         with engine.connect() as connection:
-            # ۱. دریافت تاریخچه فعلی
-            stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
-            result = connection.execute(stmt, {"user_id": user_id}).fetchone()
-            
-            # ۲. تبدیل به لیست
-            if result and result[0]:
-                current_history = result[0]
-                if isinstance(current_history, str):
-                    try:
-                        current_history = json.loads(current_history)
-                    except:
+            with connection.begin():  # 🔥 این خط باعث commit خودکار میشه
+                # ۱. دریافت تاریخچه فعلی
+                stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
+                result = connection.execute(stmt, {"user_id": user_id}).fetchone()
+                
+                # ۲. تبدیل به لیست
+                if result and result[0]:
+                    current_history = result[0]
+                    if isinstance(current_history, str):
+                        try:
+                            current_history = json.loads(current_history)
+                        except:
+                            current_history = []
+                    elif not isinstance(current_history, list):
                         current_history = []
-                elif not isinstance(current_history, list):
+                else:
                     current_history = []
-            else:
-                current_history = []
-            
-            # ۳. اضافه کردن احساسات جدید
-            new_entry = {
-                "mood": mood,
-                "date": datetime.now().isoformat()
-            }
-            current_history.append(new_entry)
-            
-            # ۴. تبدیل به JSON
-            history_json = json.dumps(current_history, ensure_ascii=False)
-            
-            # ۵. ذخیره در دیتابیس
-            stmt = text("""
-                UPDATE users 
-                SET mood_history = :history_json 
-                WHERE user_id = :user_id
-            """)
-            connection.execute(stmt, {
-                "history_json": history_json,
-                "user_id": user_id
-            })
-            connection.commit()  # 🔥 commit صحیح
+                
+                # ۳. اضافه کردن احساسات جدید
+                new_entry = {
+                    "mood": mood,
+                    "date": datetime.now().isoformat()
+                }
+                current_history.append(new_entry)
+                
+                # ۴. تبدیل به JSON
+                history_json = json.dumps(current_history, ensure_ascii=False)
+                
+                # ۵. ذخیره در دیتابیس
+                stmt = text("""
+                    UPDATE users 
+                    SET mood_history = :history_json 
+                    WHERE user_id = :user_id
+                """)
+                connection.execute(stmt, {
+                    "history_json": history_json,
+                    "user_id": user_id
+                })
+                # 🔥 با connection.begin()، دیگه نیازی به commit دستی نیست
         
         logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد: {len(current_history)}")
         
