@@ -30,9 +30,8 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_text = mood_map.get(mood, mood)
     
     try:
-        # 🔥 استفاده از begin() برای مدیریت خودکار commit
         with engine.connect() as connection:
-            with connection.begin():  # 🔥 این خط باعث commit خودکار میشه
+            with connection.begin():
                 # ۱. دریافت تاریخچه فعلی
                 stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
                 result = connection.execute(stmt, {"user_id": user_id}).fetchone()
@@ -70,17 +69,16 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "history_json": history_json,
                     "user_id": user_id
                 })
-                # 🔥 با connection.begin()، دیگه نیازی به commit دستی نیست
         
         logger.info(f"✅ احساسات کاربر {user_id} ذخیره شد. تعداد: {len(current_history)}")
         
-        # ۶. حذف پیام دکمه‌ها
+        # ۶. حذف پیام دکمه‌های انتخاب احساسات
         try:
             await query.message.delete()
         except:
             pass
         
-        # ۷. ارسال منوی اصلی
+        # 🔥 ۷. فقط منوی اصلی رو نمایش بده (بدون پیام موفقیت جداگانه)
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -90,10 +88,10 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
         ]
         
+        # 🔥 فقط منو بدون پیام موفقیت
         await query.message.reply_text(
-            f"🏠 **خانه**\n\n"
-            f"✅ احساسات امروزت (**{mood_text}**) با موفقیت ثبت شد! 🌸\n\n"
-            "به ربات همراه و مشاوره شخصی خود خوش آمدی.\n\n"
+            "🏠 **خانه**\n\n"
+            "به ربات همراه و مشاوره شخصی خود خوش آمدی. 🌸\n\n"
             "اینجا می‌تونی:\n"
             "• با **همراه هوشمند** خودت گفتگو کنی\n"
             "• از **مشاوره‌های عمیق** بهره‌مند بشی\n"
@@ -126,6 +124,9 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message:
         return
     
+    # 🔥 تعریف text در ابتدا با مقدار پیش‌فرض
+    text = "📭 **تاریخچه‌ای وجود ندارد.**\n\nهنوز احساساتی ثبت نکردی.\nاز منوی اصلی می‌تونی احساساتت رو ثبت کنی."
+    
     try:
         with engine.connect() as connection:
             stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
@@ -155,12 +156,7 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if not mood_history or len(mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-            await message.reply_text(
-                "📭 **تاریخچه‌ای وجود ندارد.**\n\n"
-                "هنوز احساساتی ثبت نکردی.\n"
-                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی.",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
+            await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
             return
         
         # نمایش ۳۰ مورد آخر
