@@ -37,10 +37,14 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['editing'] = None
         context.user_data['edit_question_id'] = None
 
-        # استفاده از getattr برای جلوگیری از خطا در صورت نبودن فیلد
+        # دریافت وضعیت اعلان‌ها
         morning_enabled = getattr(user, 'morning_msg_enabled', True)
         night_enabled = getattr(user, 'night_msg_enabled', True)
-        notifications = getattr(user, 'notifications', True)
+        notifications_enabled = getattr(user, 'notifications', True)
+        
+        # 🔥 اگر همه فعال باشن، میگیم فعال، وگرنه غیرفعال
+        all_notifications_enabled = morning_enabled and night_enabled and notifications_enabled
+        status = "✅ فعال" if all_notifications_enabled else "❌ غیرفعال"
 
         text = (
             f"👤 **پروفایل شما**\n\n"
@@ -48,9 +52,7 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"جنسیت: {'مرد' if user.gender == 'male' else 'زن' if user.gender == 'female' else 'تعیین نشده'}\n"
             f"سن: {user.age or 'تعیین نشده'}\n"
             f"سبک گفتگو: {user.chat_style or 'تعیین نشده'}\n"
-            f"🌅 اعلان صبح: {'✅ فعال' if morning_enabled else '❌ غیرفعال'}\n"
-            f"🌙 اعلان شب: {'✅ فعال' if night_enabled else '❌ غیرفعال'}\n"
-            f"🔔 اعلان‌ها: {'✅ فعال' if notifications else '❌ غیرفعال'}"
+            f"🔔 اعلان‌ها: {status}"
         )
 
         keyboard = [
@@ -58,19 +60,13 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("✏️ ویرایش جنسیت", callback_data="edit_gender")],
             [InlineKeyboardButton("✏️ ویرایش سن", callback_data="edit_age")],
             [InlineKeyboardButton("✏️ ویرایش سبک گفتگو", callback_data="edit_style")],
-            [InlineKeyboardButton("🌅 تنظیم اعلان صبح", callback_data="edit_morning")],
-            [InlineKeyboardButton("🌙 تنظیم اعلان شب", callback_data="edit_night")],
             [InlineKeyboardButton("🔔 تنظیم اعلان‌ها", callback_data="edit_notifications")],
             [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
         ]
         await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logger.error(f"❌ خطا در نمایش پروفایل: {e}")
-        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-        await message.reply_text(
-            "❌ خطایی در نمایش پروفایل رخ داد.",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await message.reply_text("❌ خطایی رخ داد.")
     finally:
         db.close()
 
@@ -271,6 +267,7 @@ async def set_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.close()
 
 async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """تنظیم همه اعلان‌ها (صبح، شب، عمومی) با یک کلیک"""
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
@@ -279,74 +276,35 @@ async def edit_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
         if user:
-            user.notifications = not user.notifications
-            db.commit()
-            status = "فعال" if user.notifications else "غیرفعال"
-            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
-            await query.edit_message_text(
-                f"✅ اعلان‌ها {status} شدند.",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        else:
-            await query.edit_message_text("❗ کاربر یافت نشد.")
-    except Exception as e:
-        logger.error(f"❌ خطا: {e}")
-        await query.edit_message_text("❌ خطایی رخ داد.")
-    finally:
-        db.close()
-
-async def edit_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = update.effective_user.id
-    
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter_by(user_id=user_id).first()
-        if user:
-            user.morning_msg_enabled = not user.morning_msg_enabled
-            db.commit()
-            status = "فعال" if user.morning_msg_enabled else "غیرفعال"
-            keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
-            await query.edit_message_text(
-                f"✅ اعلان صبح {status} شد.",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        else:
-            await query.edit_message_text("❗ کاربر یافت نشد.")
-    except Exception as e:
-        logger.error(f"❌ خطا: {e}")
-        await query.edit_message_text("❌ خطایی رخ داد.")
-    finally:
-        db.close()
-
-async def edit_night(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = update.effective_user.id
-    
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter_by(user_id=user_id).first()
-        if user:
-            # استفاده از getattr برای جلوگیری از خطا
-            if hasattr(user, 'night_msg_enabled'):
-                user.night_msg_enabled = not user.night_msg_enabled
-            else:
-                # اگر فیلد وجود نداشت، یک مقدار پیش‌فرض بذار
+            # 🔥 گرفتن وضعیت فعلی
+            morning = getattr(user, 'morning_msg_enabled', True)
+            night = getattr(user, 'night_msg_enabled', True)
+            notifications = getattr(user, 'notifications', True)
+            
+            # 🔥 اگه همه فعال باشن، غیرفعال کن، وگرنه همه رو فعال کن
+            if morning and night and notifications:
+                user.morning_msg_enabled = False
                 user.night_msg_enabled = False
+                user.notifications = False
+                status = "غیرفعال"
+            else:
+                user.morning_msg_enabled = True
+                user.night_msg_enabled = True
+                user.notifications = True
+                status = "فعال"
+            
             db.commit()
-            status = "فعال" if user.night_msg_enabled else "غیرفعال"
+            
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به پروفایل", callback_data="profile_menu")]]
             await query.edit_message_text(
-                f"✅ اعلان شب {status} شد.",
+                f"✅ همه اعلان‌ها {status} شدند.",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
         else:
             await query.edit_message_text("❗ کاربر یافت نشد.")
     except Exception as e:
-        logger.error(f"❌ خطا در ویرایش اعلان شب: {e}")
-        await query.edit_message_text("❌ خطایی رخ داد. لطفاً دوباره تلاش کن.")
+        logger.error(f"❌ خطا در تنظیم اعلان‌ها: {e}")
+        await query.edit_message_text("❌ خطایی رخ داد.")
     finally:
         db.close()
 
