@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from app.database import engine
 from datetime import datetime
 import json
-from sqlalchemy import text
+from sqlalchemy import text as sql_text  # 🔥 تغییر نام برای جلوگیری از تداخل
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with engine.connect() as connection:
             with connection.begin():
                 # ۱. دریافت تاریخچه فعلی
-                stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
+                stmt = sql_text("SELECT mood_history FROM users WHERE user_id = :user_id")
                 result = connection.execute(stmt, {"user_id": user_id}).fetchone()
                 
                 # ۲. تبدیل به لیست
@@ -60,7 +60,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 history_json = json.dumps(current_history, ensure_ascii=False)
                 
                 # ۵. ذخیره در دیتابیس
-                stmt = text("""
+                stmt = sql_text("""
                     UPDATE users 
                     SET mood_history = :history_json 
                     WHERE user_id = :user_id
@@ -78,7 +78,7 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
         
-        # 🔥 ۷. فقط منوی اصلی رو نمایش بده (بدون پیام موفقیت جداگانه)
+        # ۷. فقط منوی اصلی رو نمایش بده (بدون پیام موفقیت جداگانه)
         keyboard = [
             [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
              InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
@@ -88,7 +88,6 @@ async def record_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
         ]
         
-        # 🔥 فقط منو بدون پیام موفقیت
         await query.message.reply_text(
             "🏠 **خانه**\n\n"
             "به ربات همراه و مشاوره شخصی خود خوش آمدی. 🌸\n\n"
@@ -124,12 +123,9 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message:
         return
     
-    # 🔥 تعریف text در ابتدا با مقدار پیش‌فرض
-    text = "📭 **تاریخچه‌ای وجود ندارد.**\n\nهنوز احساساتی ثبت نکردی.\nاز منوی اصلی می‌تونی احساساتت رو ثبت کنی."
-    
     try:
         with engine.connect() as connection:
-            stmt = text("SELECT mood_history FROM users WHERE user_id = :user_id")
+            stmt = sql_text("SELECT mood_history FROM users WHERE user_id = :user_id")
             result = connection.execute(stmt, {"user_id": user_id}).fetchone()
         
         if not result:
@@ -156,12 +152,17 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if not mood_history or len(mood_history) == 0:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-            await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+            await message.reply_text(
+                "📭 **تاریخچه‌ای وجود ندارد.**\n\n"
+                "هنوز احساساتی ثبت نکردی.\n"
+                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی.",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
             return
         
         # نمایش ۳۰ مورد آخر
         history = mood_history[-30:]
-        text = "📋 **تاریخچه احساسات شما:**\n\n"
+        result_text = "📋 **تاریخچه احساسات شما:**\n\n"  # 🔥 تغییر نام به result_text
         mood_emoji = {
             "good": "😊",
             "happy": "😄",
@@ -187,10 +188,10 @@ async def full_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 date_str = "نامشخص"
             
             emoji = mood_emoji.get(mood, "🤔")
-            text += f"{emoji} **{mood}** - {date_str}\n"
+            result_text += f"{emoji} **{mood}** - {date_str}\n"
         
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
-        await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await message.reply_text(result_text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     except Exception as e:
         logger.error(f"❌ خطا در نمایش تاریخچه: {e}")
