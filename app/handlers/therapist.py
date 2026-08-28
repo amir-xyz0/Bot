@@ -37,7 +37,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = db.query(User).filter_by(user_id=user_id).first()
     except Exception as e:
         logger.error(f"❌ خطا در دیتابیس: {e}")
-        await message.reply_text("❌ خطا در ارتباط با دیتابیس.")
+        await message.reply_text("❌ خطا در ارتباط با سرور.")
         db.close()
         return
     db.close()
@@ -58,7 +58,7 @@ async def start_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔚 پایان جلسه", callback_data="end_therapy")]]
     await message.reply_text(
-        f"🧠 **مشاوره درون**\n\n{THERAPY_QUESTIONS['start']}",
+        f"🧠 مشاوره با تارس\n\n{THERAPY_QUESTIONS['start']}",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -178,7 +178,7 @@ async def end_therapy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
-        "🌿 **جلسه‌ی مشاوره به پایان رسید.**\n\n"
+        "🌿 جلسه‌ی مشاوره به پایان رسید.\n\n"
         "هر زمان که نیاز داشتی، من اینجام تا همراهت باشم. 🌸",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
