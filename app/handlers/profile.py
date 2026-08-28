@@ -19,7 +19,7 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
     msg = await query.message.reply_text(
-        "👋 به ربات دستیار شخصی خوش آمدی"
+        "به ربات دستیار شخصی خوش آمدی 👋\n"
         "برای شروع، نام خود را وارد کن:"
     )
     context.user_data['last_bot_message_id'] = msg.message_id
