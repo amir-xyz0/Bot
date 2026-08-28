@@ -52,7 +52,7 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not user:
         logger.warning(f"⚠️ کاربر {user_id} ثبت‌نام نکرده")
-        keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]]
         await message.reply_text(
             "❗ ثبت‌نام نکرده‌اید. لطفاً /start را بزنید.",
             reply_markup=InlineKeyboardMarkup(keyboard)
@@ -68,12 +68,12 @@ async def start_past_self(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("📋 دیدن پاسخ‌های قبلی", callback_data="past_self_show_answers")],
             [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
-            [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
+            [InlineKeyboardButton("💬 گفتگو با گذشته", callback_data="past_self_free_chat")],
             [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
         ]
         await message.reply_text(
-            "🕰️ **آیینه‌ی گذشته**\n\n"
-            "شما قبلاً در مصاحبه‌ای شرکت کرده‌اید.\n\n"
+            "🕰️ آیینه‌ی گذشته\n\n"
+            "شما قبلاً در مصاحبه‌ای شرکت کرده‌اید 🪽\n\n"
             "• می‌توانید پاسخ‌های قبلی را مرور کنید.\n"
             "• مصاحبه‌ی جدیدی شروع کنید.\n"
             "• یا با نسخه‌ی گذشته‌ی خود گفتگو کنید.",
@@ -105,14 +105,14 @@ async def send_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     question_data = PAST_QUESTIONS[step]
     text = (
-        f"🕰️ **مصاحبه با گذشته – سوال {step+1} از {len(PAST_QUESTIONS)}**\n\n"
+        f"🕰️ پاسخ به این سوالات باعث بازسازی دقیق‌تر گذشته شما می‌شود – سوال {step+1} از {len(PAST_QUESTIONS)}**\n\n"
         f"{question_data['question']}\n\n"
-        f"✍️ پاسخ خود را بنویسید:"
+        f"✍️ پاسخ خود را کامل بنویسید:"
     )
 
     keyboard = [
         [InlineKeyboardButton("⏹️ پایان مصاحبه", callback_data="past_self_end_interview")],
-        [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]
     ]
 
     # ارسال سوال جدید
@@ -204,13 +204,13 @@ async def finish_interview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['last_question_id'] = None
 
     text = (
-        "✅ **مصاحبه کامل شد!**\n\n"
+        "اکنون می‌توانید با گذشته خود حرف بزنید 🥹 🎉\n\n"
         f"شما به {len(answers)} سوال پاسخ دادید.\n"
-        "حالا می‌توانید «گفتگوی آزاد» رو شروع کنید."
+        "با 'گفتگو با گذشته' می‌تونی نسخه قبلی خودت رو ببینی ."
     )
 
     keyboard = [
-        [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
+        [InlineKeyboardButton("💬 گفتگو با گذشته", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
 
@@ -257,7 +257,7 @@ async def show_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🔄 مصاحبه‌ی جدید", callback_data="past_self_new_interview")],
         [InlineKeyboardButton("🗑️ پاک کردن پاسخ‌ها", callback_data="past_self_delete_answers")],
-        [InlineKeyboardButton("💬 گفتگوی آزاد", callback_data="past_self_free_chat")],
+        [InlineKeyboardButton("💬 گفتگو با گذشته", callback_data="past_self_free_chat")],
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -282,7 +282,7 @@ async def delete_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.edit_message_text(
-        "✅ پاسخ‌ها پاک شد.",
+        "پاسخ‌ها پاک شد، اکنون می‌توانید دوباره شروع کنید 🐚",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -380,9 +380,9 @@ async def free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]
     ]
     await query.message.reply_text(
-        "🕰️ **گفتگوی آزاد با گذشته**\n\n"
+        "🕰️ گفتگو با نسخه گذشته من\n\n"
         "هر سوالی داری از خودت در گذشته بپرس.\n"
-        "مثلاً: «چرا اون تصمیم رو گرفتی؟» یا «چه حسی داشتی اون موقع؟»",
+        "مثلاً: «چرا اون تصمیم رو گرفتی؟» یا «اون موقع چه حسی داشتی؟»",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -401,7 +401,7 @@ async def end_free_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
     await query.message.reply_text(
-        "✅ **گفتگوی آزاد به پایان رسید.**",
+        "گفتگو به پایان رسید.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
