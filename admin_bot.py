@@ -55,7 +55,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_USER_ID:
-        await update.message.reply_text("⛔ شما دسترسی به این ربات ندارید.")
+        await update.message.reply_text("⛔ شما به این ربات دسترسی ندارید.")
         return
     
     keyboard = [
@@ -65,9 +65,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔍 جستجوی کاربر", callback_data="search_user")]
     ]
     await update.message.reply_text(
-        "🤖 **پنل مدیریت**\n\n"
-        "سلام ادمین عزیز! 👋\n"
-        "از اینجا ربات رو مدیریت کن.",
+        "پنل مدیریت\n\n"
+        "مدیریت ربات.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -104,7 +103,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     pass
         
         text = (
-            f"📊 **آمار کاربران**\n\n"
+            f"📊 آمار کاربران\n\n"
             f"👥 کل کاربران: {total}\n"
             f"✅ فعال‌های هفته اخیر: {active}\n"
             f"📅 {datetime.now().strftime('%Y/%m/%d %H:%M')}"
@@ -246,7 +245,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=user.user_id,
-                    text=f"📢 **پیام از ادمین:**\n\n{message_text}"
+                    text=f"📢 پیام از دستیار تارس:\n\n{message_text}"
                 )
                 success += 1
             except:
@@ -255,7 +254,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['broadcast_mode'] = False
         keyboard = [[InlineKeyboardButton("🔙 پنل", callback_data="back")]]
         await update.message.reply_text(
-            f"✅ **نتیجه:**\nموفق: {success}\nناموفق: {fail}",
+            f"✅ نتیجه:\nموفق: {success}\nناموفق: {fail}",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     except Exception as e:
@@ -280,7 +279,7 @@ async def search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['search_mode'] = True
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="back")]]
     await query.edit_message_text(
-        "🔍 **جستجوی کاربر**\n\n"
+        "🔍 جستجوی کاربر\n\n"
         "نام یا آیدی عددی را وارد کن:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -305,7 +304,7 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['search_mode'] = False
             return
         
-        text = "🔍 **نتیجه:**\n\n"
+        text = "🔍 نتیجه:\n\n"
         for user in users[:5]:
             created = user.created_at.strftime('%Y/%m/%d') if user.created_at else 'نامشخص'
             text += f"👤 {user.preferred_name}\n🆔 {user.user_id}\n📅 {created}\n{'─'*20}\n"
@@ -336,7 +335,7 @@ async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔍 جستجو", callback_data="search_user")]
     ]
     await query.edit_message_text(
-        "🤖 **پنل مدیریت**\n\n"
+        "👋پنل مدیریت\n\n"
         "انتخاب کن:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
