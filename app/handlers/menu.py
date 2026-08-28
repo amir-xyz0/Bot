@@ -19,24 +19,18 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = update.message
 
     keyboard = [
-        [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
+        [InlineKeyboardButton("💬 گفتگو با دستیار", callback_data="chat_menu"),
          InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
         [InlineKeyboardButton("🕰️ آیینه‌ی گذشته", callback_data="past_self_menu"),
          InlineKeyboardButton("📊 پیش‌بینی فردا", callback_data="predict_menu")],
-        [InlineKeyboardButton("📋 تاریخچه احساسات", callback_data="history_menu"),
+        [InlineKeyboardButton("📋 تاریخچه وضعیت", callback_data="history_menu"),
          InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
     ]
     
     text = (
-        "🏠 **خانه**\n\n"
-        "به ربات همراه و مشاوره شخصی خود خوش آمدی. 🌸\n\n"
-        "اینجا می‌تونی:\n"
-        "• با **همراه هوشمند** خودت گفتگو کنی\n"
-        "• از **مشاوره‌های عمیق** بهره‌مند بشی\n"
-        "• با **گذشته‌ات** ارتباط بگیری و ازش یاد بگیری\n"
-        "• احساساتت رو **ثبت** کنی و روندش رو ببینی\n"
-        "• و خیلی چیزهای دیگه...\n\n"
-        "✨ هر روزت بهتر از دیروز ❤️"
+        "🏡 خانه\n\n"
+        "تارس هستم؛ همراه روزهای سخت و دستیار روزهای خوب شما ❤️‍🩹\n\n"
+        "🌿 از کجا شروع کنیم؟"
     )
     
     await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -55,24 +49,18 @@ async def main_menu_keep(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # ارسال منوی اصلی به صورت پیام جدید
     keyboard = [
-        [InlineKeyboardButton("💬 گفتگوی همراه", callback_data="chat_menu"),
+        [InlineKeyboardButton("💬 گفتگو با دستیار", callback_data="chat_menu"),
          InlineKeyboardButton("🧠 مشاوره", callback_data="therapy_menu")],
         [InlineKeyboardButton("🕰️ آیینه‌ی گذشته", callback_data="past_self_menu"),
          InlineKeyboardButton("📊 پیش‌بینی فردا", callback_data="predict_menu")],
-        [InlineKeyboardButton("📋 تاریخچه احساسات", callback_data="history_menu"),
+        [InlineKeyboardButton("📋 تاریخچه وضعیت", callback_data="history_menu"),
          InlineKeyboardButton("👤 پروفایل من", callback_data="profile_menu")]
     ]
     
     text = (
-        "🏠 **خانه**\n\n"
-        "به ربات همراه و مشاوره شخصی خود خوش آمدی. 🌸\n\n"
-        "اینجا می‌تونی:\n"
-        "• با **همراه هوشمند** خودت گفتگو کنی\n"
-        "• از **مشاوره‌های عمیق** بهره‌مند بشی\n"
-        "• با **گذشته‌ات** ارتباط بگیری و ازش یاد بگیری\n"
-        "• احساساتت رو **ثبت** کنی و روندش رو ببینی\n"
-        "• و خیلی چیزهای دیگه...\n\n"
-        "✨ هر روزت بهتر از دیروز ❤️"
+        "🏡 خانه\n\n"
+        "تارس هستم؛ همراه روزهای سخت و دستیار روزهای خوب شما ❤️‍🩹\n\n"
+        "🌿 از کجا شروع کنیم؟"
     )
     
     await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -86,10 +74,10 @@ async def chat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     
     context.user_data['current_section'] = 'chat'
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]]
     await query.message.reply_text(
-        "💬 **گفتگوی همراه**\n\n"
-        "هر سوالی داری، هر موضوعی که دلت می‌خواد درباره‌ش حرف بزنی، بپرس.\n"
+        "💬 گفتگو با تارس\n\n"
+        "هر موضوعی که می‌خواهید درباره آن حرف بزنید من گوش می‌دهم.\n"
         "من اینجام تا همراه و هم‌نشین خوبی برات باشم. 🌸",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
