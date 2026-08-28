@@ -43,9 +43,9 @@ async def predict_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not recent_moods:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
             await message.reply_text(
-                "📊 **پیش‌بینی فردا**\n\n"
-                "برای پیش‌بینی بهتر، حداقل چند روز احساساتت رو ثبت کن.\n"
-                "از منوی اصلی می‌تونی احساساتت رو ثبت کنی.",
+                "📊 پیش‌بینی فردا\n\n"
+                "برای پیش‌بینی بهتر، حداقل چند روز وضعیت خودت رو ثبت کن.\n"
+                "برای اینکه پیش‌بینی دقیق‌تری داشته باشم باید از احساسات شما آگاه باشم، من هر شب حال شما رو می‌پرسم🫂",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             db.close()
@@ -77,12 +77,12 @@ async def predict_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به خانه", callback_data="main_menu")]]
         if result["success"]:
             await message.reply_text(
-                f"📊 **پیش‌بینی فردا**\n\n{result['reply']}",
+                f"📊 پیش‌بینی فردا\n\n{result['reply']}",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
         else:
             await message.reply_text(
-                "📊 **پیش‌بینی فردا**\n\n"
+                "📊 پیش‌بینی فردا\n\n"
                 "متأسفم، الان نمی‌تونم پیش‌بینی کنم. لطفاً دوباره تلاش کن. ❤️",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
