@@ -17,7 +17,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await update.message.reply_text(
             "👋 خوش آمدید!\n\n"
-            "برای استفاده از ربات، لطفاً ابتدا ثبت‌نام کنید.",
+            "برای استفاده از ربات، ابتدا ثبت‌نام کنید.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         db.close()
