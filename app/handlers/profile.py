@@ -19,7 +19,7 @@ async def start_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
     msg = await query.message.reply_text(
-        "👋 به ربات همراه خوش آمدی"
+        "👋 به ربات دستیار شخصی خوش آمدی"
         "برای شروع، نام خود را وارد کن:"
     )
     context.user_data['last_bot_message_id'] = msg.message_id
@@ -157,9 +157,9 @@ async def get_style(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         keyboard = [[InlineKeyboardButton("🏠 رفتن به خانه", callback_data="main_menu")]]
         await query.message.reply_text(
-            "✅ ثبت‌نام شما با موفقیت کامل شد!\n\n"
-            "به جمع کاربران تارس خوش آمدی. 🌸\n"
-            "حالا می‌تونی از همه بخش‌ها استفاده کنی.",
+            "ثبت‌نام شما کامل شد!\n\n"
+            "به جمع کاربران تارس خوش آمدی 🪷\n"
+            "حالا می‌تونی از همه بخش‌ها استفاده کنی 🪐",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     except Exception as e:
