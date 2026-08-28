@@ -152,7 +152,7 @@ async def show_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("📭 کاربری ثبت‌نام نکرده.")
             return
         
-        text = f"📋 **لیست کاربران (صفحه {page+1} از {total_pages}):**\n\n"
+        text = f"📋 لیست کاربران (صفحه {page+1} از {total_pages}):\n\n"
         for i, user in enumerate(users, 1):
             created = user.created_at.strftime('%Y/%m/%d') if user.created_at else 'نامشخص'
             moods = len(user.mood_history) if user.mood_history else 0
@@ -220,7 +220,7 @@ async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['broadcast_mode'] = True
     keyboard = [[InlineKeyboardButton("🔙 لغو", callback_data="back")]]
     await query.edit_message_text(
-        "📨 **ارسال پیام عمومی**\n\n"
+        "📨 ارسال پیام عمومی\n\n"
         "پیام خود را بنویسید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
