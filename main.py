@@ -149,6 +149,7 @@ app.add_error_handler(error_handler)
 # دیتابیس و Scheduler
 # ============================================================
 logger.info("🔧 در حال اطمینان از وجود جدول‌ها...")
+Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine)
 logger.info("✅ جدول‌ها آماده هستند.")
 
